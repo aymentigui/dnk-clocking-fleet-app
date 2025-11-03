@@ -19,15 +19,15 @@ import { useRouter } from "next/navigation";
 
 import Cookies from "js-cookie";
 
-export default function LoginForm({
-  url,
-}:any) {
+export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  // const url ="http://localhost:3000";
+  const url = "https://dnk-clocking-fleet.vercel.app"
 
   const push = (path: string) => {
     router.push(path);
@@ -40,7 +40,7 @@ export default function LoginForm({
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/login",
+        url+"/api/login",
         {
           credentials: "include", // Include credentials (cookies) with the request
           method: "POST",
