@@ -17,6 +17,8 @@ export default function PostPage() {
   const [cameraId, setCameraId] = useState<string | null>(null)
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
   const [isCameraLoading, setIsCameraLoading] = useState(false)
+  const [type, setType] = useState<string | null>(null)
+  const [isClient, setIsClient] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
@@ -120,7 +122,7 @@ export default function PostPage() {
     setStatus("sending")
     setMessage("⏳ Envoi des données...")
     const token = localStorage.getItem("token")
-    const type = localStorage.getItem("type_s")
+    const currentType = localStorage.getItem("type_s")
 
     try {
       const res = await fetch("https://dnk-clocking-fleet.vercel.app/api/admin/clocking", {
@@ -132,7 +134,7 @@ export default function PostPage() {
         body: JSON.stringify({
           matricule: busCode,
           conducteur_matricule: driverCode,
-          type,
+          type: currentType,
         }),
       })
 
@@ -161,6 +163,8 @@ export default function PostPage() {
   }
 
   useEffect(() => {
+    setIsClient(true)
+    
     const token = localStorage.getItem("token")
     if (!token) {
       window.location.href = "/login"
@@ -168,12 +172,14 @@ export default function PostPage() {
     }
 
     // Vérifier si le type a été choisi
-    const type = localStorage.getItem("type_s")
-    if (!type) {
+    const currentType = localStorage.getItem("type_s")
+    if (!currentType) {
       // Rediriger vers le dashboard si le type n est pas défini
       router.push("/dashboard")
       return
     }
+    
+    setType(currentType)
 
     const init = async () => {
       const preferredCameraId = await getCameras()
@@ -211,6 +217,18 @@ export default function PostPage() {
     }
   }
 
+  // Si pas encore côté client, afficher un loader
+  if (!isClient) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
       {/* Header */}
@@ -221,7 +239,7 @@ export default function PostPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">
-            Type: {localStorage.getItem("type_s") === "entrer" ? "Entrée" : "Sortie"}
+            Type: {type === "entrer" ? "Entrée" : "Sortie"}
           </span>
           <Button onClick={handleLogout} className="bg-gray-500 hover:bg-gray-600 text-white">
             Déconnexion
