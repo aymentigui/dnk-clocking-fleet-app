@@ -1,100 +1,130 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Home, LogIn, LogOut } from "lucide-react"
-import Image from "next/image"
+import { useEffect, useState } from "react";
+import { Home, LogIn, LogOut, QrCode, ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const [selectedType, setSelectedType] = useState<"entrer" | "sortir" | null>(null)
+export default function Dashboard() {
+  const [userType, setUserType] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem("token");
+    const type = localStorage.getItem("type");
+
     if (!token) {
-      window.location.href = "/login"
-      return
+      window.location.href = "/login";
+      return;
     }
 
-    // Vérifier s il y a des messages de scan précédents
-    const successMessage = localStorage.getItem("scan_success_message")
-    const errorMessage = localStorage.getItem("scan_error_message")
+    setUserType(type);
 
-    if (successMessage) {
-      alert(successMessage)
-      localStorage.removeItem("scan_success_message")
+    // Vérifier les messages de scan
+    const scanSuccess = localStorage.getItem("scan_success_message");
+    const scanError = localStorage.getItem("scan_error_message");
+
+    if (scanSuccess) {
+      setSuccessMessage(scanSuccess);
+      localStorage.removeItem("scan_success_message");
+
+      // Supprimer le message après 5 secondes
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
     }
 
-    if (errorMessage) {
-      alert(errorMessage)
-      localStorage.removeItem("scan_error_message")
-    }
-  }, [])
+    if (scanError) {
+      setErrorMessage(scanError);
+      localStorage.removeItem("scan_error_message");
 
-  const handleTypeSelect = (type: "entrer" | "sortir") => {
-    setSelectedType(type)
-    localStorage.setItem("type_s", type)
-    router.push("/post")
-  }
+      // Supprimer le message après 5 secondes
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+    }
+  }, []);
 
   const handleLogout = () => {
-    localStorage.clear()
-    window.location.href = "/login"
-  }
+    localStorage.clear();
+    window.location.href = "/login";
+  };
+
+  const goToScan = (type_s: string) => {
+    localStorage.setItem("type_s", type_s);
+    window.location.href = "/post";
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      {/* Header */}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="fixed top-0 w-full bg-white shadow-sm p-4 flex justify-between items-center">
         <div className="flex items-center">
           <Home className="w-5 h-5 text-blue-600 mr-2" />
-          <span className="font-semibold text-gray-800">Système de pointage</span>
+          <span className="font-semibold">Système de pointage</span>
         </div>
         <Button onClick={handleLogout} className="bg-gray-500 hover:bg-gray-600 text-white">
           Déconnexion
         </Button>
       </div>
 
-      {/* Contenu principal */}
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mt-16 space-y-6">
-        <div className="flex justify-center">
-          <Image
-            src="/logo-djamiaya.png"
-            alt="Logo"
-            width={240}
-            height={120}
-            priority
-          />
+      <div className="w-full max-w-lg bg-white p-6 mt-16 rounded-lg shadow-lg border">
+        <div className="flex justify-center mb-4">
+          <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
         </div>
 
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Choisissez le type de pointage</p>
-        </div>
+        {/* Alertes de succès et d'erreur */}
+        {successMessage && (
+          <Alert className="mb-4 bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert className="mb-4 bg-red-50 border-red-200">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-4">
-          <Button
-            onClick={() => handleTypeSelect("entrer")}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
-          >
-            <LogIn className="w-5 h-5 mr-2" />
-            Pointage d Entrée
-          </Button>
+          {userType === "2" && (
+            <>
+              <Button onClick={() => goToScan("1")} className="w-full bg-blue-500 hover:bg-blue-600 flex justify-between px-4 py-6 text-white">
+                <LogIn /> <span>Scanner Entrée Bus</span> <ArrowRight />
+              </Button>
+              <Button onClick={() => goToScan("0")} className="w-full bg-red-500 hover:bg-red-600 flex justify-between px-4 py-6 text-white">
+                <LogOut /> <span>Scanner Sortie Bus</span> <ArrowRight />
+              </Button>
+            </>
+          )}
 
-          <Button
-            onClick={() => handleTypeSelect("sortir")}
-            className="w-full bg-red-600 hover:bg-red-700 text-white py-6 text-lg"
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Pointage de Sortie
-          </Button>
+          {userType === "3" && (
+            <>
+              <Button onClick={() => goToScan("4")} className="w-full bg-green-500 hover:bg-green-600 flex justify-between px-4 py-6 text-white">
+                <LogIn /> <span>Entrée spéciale (type 4)</span> <ArrowRight />
+              </Button>
+              <Button onClick={() => goToScan("3")} className="w-full bg-orange-500 hover:bg-orange-600 flex justify-between px-4 py-6 text-white">
+                <LogOut /> <span>Sortie spéciale (type 3)</span> <ArrowRight />
+              </Button>
+            </>
+          )}
+
+          {["0", "1"].includes(userType || "") && (
+            <Button onClick={() => goToScan("bus")} className="w-full bg-green-500 hover:bg-green-600 flex justify-between px-4 py-6 text-white">
+              <QrCode /> <span>Scanner Bus</span> <ArrowRight />
+            </Button>
+          )}
         </div>
 
-        <div className="text-center text-xs text-gray-400 border-t pt-4">
-          Système de contrôle d accès • Version 2.0.0
-        </div>
+        <p className="text-center text-gray-400 text-xs mt-6">Version 1.1.0</p>
       </div>
     </div>
-  )
+  );
 }
