@@ -50,7 +50,7 @@ export default function PostPage() {
         body: JSON.stringify({ matricule: bus, conducteur_id: conducteur, type }),
       });
 
-      if (!res.ok) throw new Error("Erreur d'envoi");
+      if (!res.ok) throw new Error("Erreur d envoi");
       setStatus("success");
       setMessage("✅ Données envoyées avec succès !");
       setTimeout(() => {
@@ -106,7 +106,7 @@ export default function PostPage() {
         {status === "error" && <p className="text-red-500 text-center">❌ Erreur d envoi</p>}
 
         <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
-          Système de contrôle d'accès • Version 1.1.0
+          Systeme de controle d acces • Version 1.1.0
         </div>
       </div>
     </div>
