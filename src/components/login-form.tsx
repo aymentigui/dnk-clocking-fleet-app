@@ -1,37 +1,27 @@
 "use client";
 
-import type React from "react";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
-import Cookies from "js-cookie";
-
-export default function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  // const url ="http://localhost:3000";
-  const url = "https://dnk-clocking-fleet.vercel.app"
 
-  const push = (path: string) => {
-    router.push(path);
-  };
+  // 🔁 Redirige vers /dashboard si déjà connecté
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) router.push("/dashboard");
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,118 +29,85 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const response = await fetch(
-        url+"/api/login",
-        {
-          credentials: "include", // Include credentials (cookies) with the request
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
+      const response = await fetch("https://dnk-clocking-fleet.vercel.app/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Login failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Échec de connexion");
       }
 
       const data = await response.json();
-
-      if (response.status === 200) {
-        const { token, type } = data;
-        // console.log(token, type);
-        localStorage.setItem("token", token);
-        localStorage.setItem("type", type);
-      }
-
-      push("/dashboard");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("type", data.type);
+      router.push("/dashboard");
     } catch (err) {
-      // console.log("Login error:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to login. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Erreur de connexion");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <div className="flex justify-center p-6 pb-0">
-        <Image
-          src="/logo-djamiaya.png"
-          alt="Company Logo"
-          width={240}
-          height={120}
-          className="rounded-md"
-          priority
-        />
-      </div>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
-        <CardDescription className="text-center">
-          Enter your credentials to access your account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 text-sm text-white bg-red-500 rounded-md">
-              {error}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
+    <div className="flex items-center justify-center min-h-screen w-full bg-gray-50">
+      <Card className="w-full max-w-md shadow-lg">
+        <div className="flex justify-center p-6 pb-0">
+          <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
+        </div>
+
+        <CardHeader>
+          <CardTitle className="text-2xl text-center font-bold">Connexion</CardTitle>
+          <CardDescription className="text-center">Entrez vos identifiants</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <div className="p-3 text-sm text-white bg-red-500 rounded">{error}</div>}
+
+            <div >
+              <Label className="m-2">Email</Label>
               <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                className="m-2"
+                type="email"
+                placeholder="nom@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3 py-2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
             </div>
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+
+            <div>
+              <Label className="m-2">Mot de passe</Label>
+              <div className="relative">
+                <Input
+                  className="m-2"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 text-gray-400"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full m-2" disabled={isLoading}>
+              {isLoading ? "Connexion..." : "Se connecter"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
