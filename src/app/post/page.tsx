@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BrowserMultiFormatReader } from "@zxing/library";
-import { Home, Bus, User, CheckCircle, XCircle } from "lucide-react";
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
+import { Home, Bus, User, CheckCircle, XCircle, Camera, CameraOff } from "lucide-react";
 
 export default function PostPage() {
   const [step, setStep] = useState<"idle" | "scanning-bus" | "bus-scanned" | "scanning-driver" | "sending" | "success" | "error">("idle");
@@ -12,9 +12,24 @@ export default function PostPage() {
   const [message, setMessage] = useState<string>("");
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string>("");
+  const [scanningStatus, setScanningStatus] = useState<string>("Prêt à scanner...");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /** ✅ Configuration du lecteur QR code */
+  const initializeReader = () => {
+    // Configurer les hints pour améliorer la détection
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+
+    const reader = new BrowserMultiFormatReader(hints);
+    readerRef.current = reader;
+    return reader;
+  };
 
   /** ✅ Démarrer le scan du bus */
   const startBusScan = async () => {
@@ -23,6 +38,7 @@ export default function PostPage() {
     setDriverCode(null);
     setMessage("");
     setCameraError("");
+    setScanningStatus("Recherche de QR code...");
     await startCamera();
   };
 
@@ -31,6 +47,7 @@ export default function PostPage() {
     setStep("scanning-driver");
     setMessage("");
     setCameraError("");
+    setScanningStatus("Recherche de QR code...");
     await startCamera();
   };
 
@@ -38,9 +55,7 @@ export default function PostPage() {
   const startCamera = async () => {
     try {
       // Arrêter la caméra existante
-      if (readerRef.current) {
-        readerRef.current.reset();
-      }
+      stopCamera();
 
       // Vérifier si les APIs sont supportées
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -52,44 +67,83 @@ export default function PostPage() {
         video: { 
           facingMode: "environment", // Préférer la caméra arrière
           width: { ideal: 1280 },
-          height: { ideal: 720 }
+          height: { ideal: 720 },
+          aspectRatio: { ideal: 1.7777777778 }
         } 
       });
+
+      streamRef.current = stream;
 
       // S assurer que la vidéo est prête
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true"); // Important pour iOS
+        videoRef.current.setAttribute("playsinline", "true");
         
         // Attendre que la vidéo soit chargée
-        await new Promise((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              resolve(true);
-            };
+        await new Promise((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error("Élément vidéo non trouvé"));
+            return;
           }
+
+          videoRef.current.onloadedmetadata = () => {
+            resolve(true);
+          };
+
+          videoRef.current.onerror = () => {
+            reject(new Error("Erreur lors du chargement de la vidéo"));
+          };
+
+          // Timeout de sécurité
+          setTimeout(() => {
+            resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
+          }, 2000);
         });
 
         // Démarrer la lecture
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.warn("Erreur play:", playError);
+          // Continuer malgré l erreur de play
+        }
+
+        // Initialiser le lecteur QR code
+        const reader = initializeReader();
+        setIsScanning(true);
+        setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
+
+        // Démarrer la détection de QR codes avec gestion d erreur améliorée
+        const startDecoding = () => {
+          try {
+            reader.decodeFromVideoDevice(
+              null, 
+              videoRef.current!, 
+              (result, error) => {
+                if (result) {
+                  console.log("QR code détecté:", result.getText());
+                  const code = result.getText();
+                  handleScan(code);
+                }
+                
+                if (error) {
+                  // Ignorer les erreurs de décodage normales (pas de QR code visible)
+                  if (!error.message?.includes("NotFound")) {
+                    console.log("Décodage en cours...", error.message);
+                  }
+                }
+              }
+            );
+          } catch (decodeError) {
+            console.error("Erreur décodage:", decodeError);
+            setScanningStatus("Erreur de scan - Réessayez");
+          }
+        };
+
+        // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
+        setTimeout(startDecoding, 1000);
+
       }
-
-      // Initialiser le lecteur QR code
-      const reader = new BrowserMultiFormatReader();
-      readerRef.current = reader;
-      setIsScanning(true);
-
-      // Démarrer la détection de QR codes
-      reader.decodeFromVideoDevice(null, videoRef.current!, (result, error) => {
-        if (result) {
-          const code = result.getText();
-          handleScan(code);
-        }
-        if (error) {
-          // Ignorer les erreurs de décodage continues (c est normal)
-          console.log("Décodage en cours...");
-        }
-      });
 
     } catch (error) {
       console.error("Erreur caméra:", error);
@@ -106,22 +160,52 @@ export default function PostPage() {
 
   /** ✅ Arrêter la caméra */
   const stopCamera = () => {
+    // Arrêter le scan
     if (readerRef.current) {
-      readerRef.current.reset();
+      try {
+        readerRef.current.reset();
+        readerRef.current.stopContinuousDecode();
+      } catch (error) {
+        console.log("Arrêt du lecteur QR");
+      }
       readerRef.current = null;
     }
-    
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
+
+    // Arrêter le stream vidéo
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
+      tracks.forEach(track => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+
+    // Nettoyer la vidéo
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    
+
+    // Nettoyer les timeouts
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
     setIsScanning(false);
+    setScanningStatus("Caméra arrêtée");
   };
 
   /** ✅ Gérer le scan */
   const handleScan = (code: string) => {
+    console.log("Code scanné:", code);
+    
+    // Validation basique du code
+    if (!code || code.trim().length === 0) {
+      setScanningStatus("QR code invalide - Réessayez");
+      return;
+    }
+
+    setScanningStatus("QR code détecté !");
+
     if (step === "scanning-bus") {
       setBusCode(code);
       setStep("bus-scanned");
@@ -130,6 +214,26 @@ export default function PostPage() {
       setDriverCode(code);
       stopCamera();
       sendData(busCode!, code);
+    }
+  };
+
+  /** ✅ Forcer la détection manuellement (fallback) */
+  const forceScanDetection = () => {
+    if (!readerRef.current || !videoRef.current) return;
+
+    try {
+      readerRef.current.decodeFromVideoDevice(
+        null, 
+        videoRef.current, 
+        (result, error) => {
+          if (result) {
+            const code = result.getText();
+            handleScan(code);
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Erreur scan manuel:", error);
     }
   };
 
@@ -176,6 +280,7 @@ export default function PostPage() {
     setDriverCode(null);
     setMessage("");
     setCameraError("");
+    setScanningStatus("Prêt à scanner...");
   };
 
   /** ✅ Retour au dashboard */
@@ -248,6 +353,9 @@ export default function PostPage() {
               <Bus className="w-16 h-16 mx-auto text-blue-500 animate-pulse" />
               <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le bus 🚍</h3>
               <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
+              <div className="mt-2 p-2 bg-blue-50 rounded">
+                <p className="text-xs text-blue-600 font-medium">{scanningStatus}</p>
+              </div>
             </div>
             
             {cameraError ? (
@@ -262,22 +370,41 @@ export default function PostPage() {
                 </Button>
               </div>
             ) : (
-              <video
-                ref={videoRef}
-                className="w-full h-64 border-4 border-blue-400 rounded-lg bg-black"
-                autoPlay
-                muted
-                playsInline
-              />
+              <>
+                <div className="relative">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-64 border-4 border-blue-400 rounded-lg bg-black"
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                  {/* Overlay pour aider au cadrage */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={forceScanDetection}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Forcer la détection
+                  </Button>
+                  <Button
+                    onClick={stopCamera}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <CameraOff className="w-4 h-4 mr-2" />
+                    Arrêter
+                  </Button>
+                </div>
+              </>
             )}
-            
-            <Button
-              onClick={stopCamera}
-              variant="outline"
-              className="w-full mt-2"
-            >
-              Arrêter la caméra
-            </Button>
           </div>
         )}
 
@@ -310,6 +437,9 @@ export default function PostPage() {
               <div className="mt-2 bg-blue-50 border border-blue-200 rounded p-2">
                 <p className="text-xs text-gray-600">Bus: <span className="font-bold text-blue-600">{busCode}</span></p>
               </div>
+              <div className="mt-2 p-2 bg-orange-50 rounded">
+                <p className="text-xs text-orange-600 font-medium">{scanningStatus}</p>
+              </div>
             </div>
             
             {cameraError ? (
@@ -324,26 +454,45 @@ export default function PostPage() {
                 </Button>
               </div>
             ) : (
-              <video
-                ref={videoRef}
-                className="w-full h-64 border-4 border-orange-400 rounded-lg bg-black"
-                autoPlay
-                muted
-                playsInline
-              />
+              <>
+                <div className="relative">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-64 border-4 border-orange-400 rounded-lg bg-black"
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                  {/* Overlay pour aider au cadrage */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={forceScanDetection}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Forcer la détection
+                  </Button>
+                  <Button
+                    onClick={stopCamera}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <CameraOff className="w-4 h-4 mr-2" />
+                    Arrêter
+                  </Button>
+                </div>
+              </>
             )}
-            
-            <Button
-              onClick={stopCamera}
-              variant="outline"
-              className="w-full mt-2"
-            >
-              Arrêter la caméra
-            </Button>
           </div>
         )}
 
-        {/* Les autres états (sending, success, error) restent identiques */}
+        {/* Les autres états restent similaires */}
         {/* État: Envoi en cours */}
         {step === "sending" && (
           <div className="text-center space-y-6 py-8">
