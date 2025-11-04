@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { BrowserMultiFormatReader } from "@zxing/library"
-import { Home, Bus, User, Camera, SwitchCamera, Play, RotateCcw, ArrowLeft } from "lucide-react"
+import { Html5Qrcode } from "html5-qrcode"
+import { Home, Bus, User, Camera, SwitchCamera, Play, RotateCcw } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 
@@ -12,100 +12,126 @@ export default function PostPage() {
   const [step, setStep] = useState<"idle" | "bus" | "driver" | "sending" | "complete">("idle")
   const [busCode, setBusCode] = useState<string | null>(null)
   const [driverCode, setDriverCode] = useState<string | null>(null)
-  const [message, setMessage] = useState<string>("Cliquez sur  Démarrer le scan  pour commencer")
+  const [message, setMessage] = useState<string>("Cliquez sur  Démarrer le scan du bus  pour commencer")
   const [status, setStatus] = useState<"idle" | "scanning" | "locked" | "sending" | "success" | "error">("idle")
   const [cameraId, setCameraId] = useState<string | null>(null)
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
-  const [isCameraLoading, setIsCameraLoading] = useState(false)
+  const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([])
+  const [isScanning, setIsScanning] = useState(false)
 
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null)
+  const scannerRef = useRef<Html5Qrcode | null>(null)
 
+  // Obtenir la liste des caméras disponibles
   const getCameras = async () => {
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter((device) => device.kind === "videoinput")
-      setAvailableCameras(videoDevices)
+      const cameras = await Html5Qrcode.getCameras()
+      const formattedCameras = cameras.map((cam) => ({
+        id: cam.id,
+        label: cam.label || `Caméra ${cam.id}`,
+      }))
+      setAvailableCameras(formattedCameras)
 
-      const backCamera = videoDevices.find(
-        (device) =>
-          device.label.toLowerCase().includes("back") ||
-          device.label.toLowerCase().includes("arrière") ||
-          !device.label.toLowerCase().includes("front"),
+      const backCamera = formattedCameras.find(
+        (cam) =>
+          cam.label.toLowerCase().includes("back") ||
+          cam.label.toLowerCase().includes("arrière") ||
+          cam.label.toLowerCase().includes("rear") ||
+          (!cam.label.toLowerCase().includes("front") && formattedCameras.length > 1)
       )
 
-      return backCamera?.deviceId || videoDevices[0]?.deviceId || null
+      return backCamera?.id || formattedCameras[0]?.id || null
     } catch (error) {
       console.error("Erreur lors de la récupération des caméras:", error)
       return null
     }
   }
 
-  const handleScan = useCallback(
-    (code: string) => {
-      if (step === "bus" && status === "scanning") {
-        setBusCode(code)
-        setStatus("locked")
-        setMessage(`✅ Bus scanné: ${code}\n\nCliquez sur "Continuer" pour scanner le chauffeur`)
-        if (readerRef.current) {
-          readerRef.current.reset()
-        }
-      } else if (step === "driver" && status === "scanning") {
-        setDriverCode(code)
-        setStatus("locked")
-        setMessage(`✅ Chauffeur scanné: ${code}\n\nDonnées prêtes à envoyer`)
-        if (readerRef.current) {
-          readerRef.current.reset()
-        }
-      }
-    },
-    [step, status],
-  )
-
-  const initializeScanner = async (deviceId: string | null = null) => {
-    setIsCameraLoading(true)
-    setStatus("scanning")
-
+  // Démarrer le scan
+  const startScanning = async (deviceId: string) => {
     try {
-      const reader = new BrowserMultiFormatReader()
-      readerRef.current = reader
+      const scanner = new Html5Qrcode("qr-reader")
+      scannerRef.current = scanner
 
-      reader.reset()
+      await scanner.start(
+        deviceId,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        (decodedText) => {
+          handleScanSuccess(decodedText)
+        },
+        () => {
+          // Erreur de scan silencieuse (normal pendant le scan)
+        }
+      )
 
-      await reader.decodeFromVideoDevice(deviceId, videoRef.current!, (result) => {
-        if (result) handleScan(result.getText())
-      })
+      setIsScanning(true)
+      setStatus("scanning")
     } catch (error) {
-      console.error("Erreur d initialisation du scanner:", error)
-      setMessage("❌ Erreur de caméra")
+      console.error("Erreur de démarrage du scanner:", error)
+      setMessage("❌ Erreur de caméra. Veuillez réessayer.")
       setStatus("idle")
-    } finally {
-      setIsCameraLoading(false)
     }
   }
 
-  const stopScanner = () => {
-    if (readerRef.current) {
-      readerRef.current.reset()
+  // Arrêter le scan
+  const stopScanning = async () => {
+    if (scannerRef.current && isScanning) {
+      try {
+        await scannerRef.current.stop()
+        scannerRef.current.clear()
+        scannerRef.current = null
+      } catch (error) {
+        console.error("Erreur lors de l arrêt du scanner:", error)
+      }
+      setIsScanning(false)
     }
-    setStatus("idle")
   }
 
+  // Gérer le succès du scan
+  const handleScanSuccess = async (code: string) => {
+    if (step === "bus" && status === "scanning") {
+      await stopScanning()
+      setBusCode(code)
+      setStatus("locked")
+      setMessage(`✅ Bus scanné: ${code}\n\nCliquez sur "Continuer" pour scanner le chauffeur`)
+    } else if (step === "driver" && status === "scanning") {
+      await stopScanning()
+      setDriverCode(code)
+      setStatus("locked")
+      setMessage(`✅ Chauffeur scanné: ${code}\n\nCliquez sur "Envoyer" pour valider le pointage`)
+    }
+  }
+
+  // Démarrer le scan du bus
   const startBusScan = async () => {
     setStep("bus")
-    setMessage("📷 Scannez le bus...")
+    setMessage("📷 Positionnez le QR code du bus devant la caméra...")
     const preferredCameraId = cameraId || (await getCameras())
-    setCameraId(preferredCameraId)
-    await initializeScanner(preferredCameraId)
+    if (preferredCameraId) {
+      setCameraId(preferredCameraId)
+      await startScanning(preferredCameraId)
+    }
   }
 
+  // Continuer vers le scan du chauffeur
   const continueToDriver = async () => {
     setStep("driver")
-    setMessage("📷 Scannez le chauffeur...")
-    const preferredCameraId = cameraId || (await getCameras())
-    await initializeScanner(preferredCameraId)
+    setDriverCode(null)
+    setStatus("idle")
+    setMessage("Cliquez sur  Démarrer le scan du chauffeur  pour continuer")
   }
 
+  // Démarrer le scan du chauffeur
+  const startDriverScan = async () => {
+    setMessage("📷 Positionnez le QR code du chauffeur devant la caméra...")
+    const preferredCameraId = cameraId
+    if (preferredCameraId) {
+      await startScanning(preferredCameraId)
+    }
+  }
+
+  // Envoyer les données au serveur
   const submitScan = async () => {
     if (!busCode || !driverCode) {
       setMessage("❌ Les deux codes sont nécessaires")
@@ -114,7 +140,7 @@ export default function PostPage() {
 
     setStep("sending")
     setStatus("sending")
-    setMessage("⏳ Envoi des données...")
+    setMessage("⏳ Envoi des données au serveur...")
     const token = localStorage.getItem("token")
     const type = localStorage.getItem("type_s")
 
@@ -137,34 +163,48 @@ export default function PostPage() {
       const data = await res.json()
       setStep("complete")
       setStatus("success")
-      setMessage(`✅ Pointage réussi!\n\n${data?.message || "Les données ont été enregistrées"}`)
-
-      localStorage.setItem("scan_success_message", `✅ Pointage effectué avec succès! ${data?.message || ""}`)
-      const recentScans = JSON.parse(localStorage.getItem("recent_scans") || "[]")
-      recentScans.unshift({
-        id: Date.now(),
-        bus: busCode,
-        driver: driverCode,
-        timestamp: new Date().toLocaleString("fr-FR"),
-      })
-      localStorage.setItem("recent_scans", JSON.stringify(recentScans))
+      setMessage(`✅ Pointage réussi!\n\n${data?.message || "Les données ont été enregistrées avec succès"}`)
     } catch (error) {
+      console.error("Erreur lors de l envoi:", error)
       setStep("complete")
       setStatus("error")
-      setMessage("❌ Erreur lors de l envoi des données")
-      localStorage.setItem("scan_error_message", "❌ Erreur lors du pointage!")
+      setMessage("❌ Erreur lors de l envoi des données au serveur")
     }
   }
 
+  // Recommencer un nouveau scan
   const startNewScan = () => {
     setBusCode(null)
     setDriverCode(null)
     setStep("idle")
     setStatus("idle")
-    setMessage("Cliquez sur  Démarrer le scan  pour commencer une nouvelle scan")
-    stopScanner()
+    setMessage("Cliquez sur  Démarrer le scan du bus  pour commencer un nouveau scan")
   }
 
+  // Changer de caméra
+  const switchCamera = async () => {
+    if (availableCameras.length <= 1) return
+
+    const currentIndex = availableCameras.findIndex((cam) => cam.id === cameraId)
+    const nextIndex = (currentIndex + 1) % availableCameras.length
+    const nextCamera = availableCameras[nextIndex]
+
+    setCameraId(nextCamera.id)
+
+    if (isScanning) {
+      await stopScanning()
+      await startScanning(nextCamera.id)
+    }
+  }
+
+  // Déconnexion
+  const handleLogout = async () => {
+    await stopScanning()
+    localStorage.clear()
+    window.location.href = "/login"
+  }
+
+  // Initialisation
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -180,33 +220,9 @@ export default function PostPage() {
     init()
 
     return () => {
-      if (readerRef.current) {
-        readerRef.current.reset()
-      }
+      stopScanning()
     }
   }, [])
-
-  const handleLogout = () => {
-    localStorage.clear()
-    if (readerRef.current) {
-      readerRef.current.reset()
-    }
-    window.location.href = "/login"
-  }
-
-  const switchCamera = async () => {
-    if (availableCameras.length <= 1) return
-
-    const currentIndex = availableCameras.findIndex((cam) => cam.deviceId === cameraId)
-    const nextIndex = (currentIndex + 1) % availableCameras.length
-    const nextCamera = availableCameras[nextIndex]
-
-    setCameraId(nextCamera.deviceId)
-
-    if (status === "scanning") {
-      await initializeScanner(nextCamera.deviceId)
-    }
-  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -221,13 +237,13 @@ export default function PostPage() {
         </Button>
       </div>
 
-      {/* Main Content */}
+      {/* Contenu principal */}
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mt-16 space-y-6">
         <div className="flex justify-center">
           <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} priority />
         </div>
 
-        {/* Status Display */}
+        {/* Affichage du statut */}
         <div className="text-center space-y-3">
           {step === "idle" && (
             <>
@@ -250,14 +266,14 @@ export default function PostPage() {
           {step === "sending" && (
             <>
               <div className="w-16 h-16 mx-auto flex items-center justify-center">
-                <div className="animate-spin">⏳</div>
+                <div className="animate-spin text-4xl">⏳</div>
               </div>
               <p className="text-lg font-semibold">Envoi en cours...</p>
             </>
           )}
           {step === "complete" && (
             <>
-              {status === "success" ? <div className="text-4xl">✅</div> : <div className="text-4xl">❌</div>}
+              {status === "success" ? <div className="text-6xl">✅</div> : <div className="text-6xl">❌</div>}
               <p className="text-lg font-semibold">{status === "success" ? "Pointage réussi" : "Erreur"}</p>
             </>
           )}
@@ -265,13 +281,13 @@ export default function PostPage() {
           <p className="text-sm text-gray-600 whitespace-pre-line mt-4">{message}</p>
         </div>
 
-        {/* Video Zone - visible only during scan */}
+        {/* Zone de scan - visible seulement si scan actif */}
         {(step === "bus" || step === "driver") && (
           <>
             <div className="flex justify-between items-center">
               <div className="flex items-center text-sm text-gray-600">
                 <Camera className="w-4 h-4 mr-2" />
-                {availableCameras.find((cam) => cam.deviceId === cameraId)?.label || "Caméra"}
+                {availableCameras.find((cam) => cam.id === cameraId)?.label || "Caméra"}
               </div>
 
               {availableCameras.length > 1 && (
@@ -279,8 +295,8 @@ export default function PostPage() {
                   onClick={switchCamera}
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 bg-transparent"
-                  disabled={isCameraLoading}
+                  className="flex items-center gap-2"
+                  disabled={!isScanning}
                 >
                   <SwitchCamera className="w-4 h-4" />
                   Changer
@@ -289,22 +305,13 @@ export default function PostPage() {
             </div>
 
             <div className="relative">
-              <video ref={videoRef} className="w-full border-2 border-gray-300 rounded" autoPlay muted playsInline />
-
-              {isCameraLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
-                  <div className="text-center">
-                    <Camera className="w-8 h-8 animate-pulse mx-auto text-gray-400" />
-                    <p className="text-sm text-gray-500 mt-2">Initialisation...</p>
-                  </div>
-                </div>
-              )}
+              <div id="qr-reader" className="w-full rounded border-2 border-gray-300"></div>
 
               {status === "locked" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-green-100 rounded opacity-80">
+                <div className="mt-4 p-4 bg-green-50 rounded-lg border-2 border-green-200">
                   <div className="text-center">
-                    <div className="text-5xl">✅</div>
-                    <p className="text-sm font-semibold text-green-700 mt-2">Scanné!</p>
+                    <div className="text-5xl mb-2">✅</div>
+                    <p className="text-sm font-semibold text-green-700">Code scanné avec succès!</p>
                   </div>
                 </div>
               )}
@@ -312,67 +319,76 @@ export default function PostPage() {
           </>
         )}
 
-        {/* Scanned Codes Display */}
+        {/* Codes scannés affichés */}
         {busCode && (
-          <div className="bg-blue-50 p-3 rounded border border-blue-200">
-            <p className="text-sm text-gray-600">🚍 Bus scanné:</p>
-            <p className="text-lg font-bold text-blue-600">{busCode}</p>
+          <div className="bg-blue-50 p-3 rounded-lg border-2 border-blue-200">
+            <p className="text-sm text-gray-600 font-medium">🚍 Bus scanné:</p>
+            <p className="text-xl font-bold text-blue-600 mt-1">{busCode}</p>
           </div>
         )}
 
         {driverCode && (
-          <div className="bg-orange-50 p-3 rounded border border-orange-200">
-            <p className="text-sm text-gray-600">👷 Chauffeur scanné:</p>
-            <p className="text-lg font-bold text-orange-600">{driverCode}</p>
+          <div className="bg-orange-50 p-3 rounded-lg border-2 border-orange-200">
+            <p className="text-sm text-gray-600 font-medium">👷 Chauffeur scanné:</p>
+            <p className="text-xl font-bold text-orange-600 mt-1">{driverCode}</p>
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Boutons d action */}
         <div className="space-y-3">
           {step === "idle" && (
-            <Button onClick={startBusScan} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              <Play className="w-4 h-4 mr-2" />
-              Démarrer le scan
+            <Button onClick={startBusScan} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12">
+              <Play className="w-5 h-5 mr-2" />
+              Démarrer le scan du bus
             </Button>
           )}
 
           {step === "bus" && status === "locked" && (
-            <Button onClick={continueToDriver} className="w-full bg-green-600 hover:bg-green-700 text-white">
-              Continuer →
+            <Button onClick={continueToDriver} className="w-full bg-green-600 hover:bg-green-700 text-white h-12">
+              Continuer vers le chauffeur →
+            </Button>
+          )}
+
+          {step === "driver" && status === "idle" && (
+            <Button
+              onClick={startDriverScan}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12"
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Démarrer le scan du chauffeur
             </Button>
           )}
 
           {step === "driver" && status === "locked" && (
-            <Button onClick={submitScan} className="w-full bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={submitScan} className="w-full bg-green-600 hover:bg-green-700 text-white h-12">
               Envoyer les données
             </Button>
           )}
 
           {step === "complete" && (
             <>
-              <Button onClick={startNewScan} variant="outline" className="w-full bg-transparent">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Nouvelle scan
+              <Button onClick={startNewScan} variant="outline" className="w-full h-12">
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Nouveau scan
               </Button>
               <Button
                 onClick={() => router.push("/dashboard")}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
                 Retour au Dashboard
               </Button>
             </>
           )}
 
           {(step === "bus" || step === "driver") && status === "scanning" && (
-            <Button onClick={stopScanner} variant="destructive" className="w-full">
-              Annuler
+            <Button onClick={stopScanning} variant="destructive" className="w-full h-12">
+              Annuler le scan
             </Button>
           )}
         </div>
 
         <div className="text-center text-xs text-gray-400 border-t pt-4">
-          Système de contrôle d accès • Version 2.0.1
+          Système de contrôle d accès • Version 2.0.0
         </div>
       </div>
     </div>
