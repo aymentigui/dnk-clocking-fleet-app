@@ -141,7 +141,9 @@ export default function PostPage() {
       setStatus("success");
       setMessage("✅ Données envoyées avec succès !");
       
-      localStorage.setItem("scan_success_message", "✅ Pointage effectué avec succès !");
+      const data= await res.json();
+
+      localStorage.setItem("scan_success_message", "✅ Pointage effectué avec succès ! "+ data&&data.message?data.message:"");
       setTimeout(() => {
         router.push("/dashboard");
       }, 1500);
