@@ -103,7 +103,7 @@ export default function PostPage() {
 
         {status === "sending" && <p className="text-blue-500 text-center">⏳ Envoi en cours...</p>}
         {status === "success" && <p className="text-green-500 text-center">✅ Envoi réussi</p>}
-        {status === "error" && <p className="text-red-500 text-center">❌ Erreur d’envoi</p>}
+        {status === "error" && <p className="text-red-500 text-center">❌ Erreur d envoi</p>}
 
         <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
           Système de contrôle d'accès • Version 1.1.0
