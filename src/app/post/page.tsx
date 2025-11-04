@@ -61,7 +61,7 @@ export default function PostPage() {
       }, 5000);
     } catch {
       setStatus("error");
-      setMessage("❌ Échec de l’envoi !");
+      setMessage("❌ Échec de l envoi !");
     }
   };
 
