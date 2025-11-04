@@ -27,7 +27,7 @@ export default function PostPage() {
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       setAvailableCameras(videoDevices);
       
-      // Préférer la caméra arrière (généralement celle qui n'est pas "front")
+      // Préférer la caméra arrière (généralement celle qui n est pas "front")
       const backCamera = videoDevices.find(device => 
         device.label.toLowerCase().includes('back') || 
         device.label.toLowerCase().includes('arrière') ||
@@ -75,7 +75,7 @@ export default function PostPage() {
         }
       );
     } catch (error) {
-      console.error("Erreur d'initialisation du scanner:", error);
+      console.error("Erreur d initialisation du scanner:", error);
       setMessage("❌ Erreur de caméra");
     } finally {
       setIsCameraLoading(false);
@@ -136,7 +136,7 @@ export default function PostPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Erreur d'envoi");
+      if (!res.ok) throw new Error("Erreur d envoi");
       
       setStatus("success");
       setMessage("✅ Données envoyées avec succès !");
@@ -150,7 +150,7 @@ export default function PostPage() {
       
     } catch {
       setStatus("error");
-      setMessage("❌ Échec de l'envoi !");
+      setMessage("❌ Échec de l envoi !");
       
       localStorage.setItem("scan_error_message", "❌ Erreur lors du pointage !");
       setTimeout(() => {
@@ -252,7 +252,7 @@ export default function PostPage() {
           <p className="text-green-500 text-center">✅ Envoi réussi - Redirection...</p>
         )}
         {status === "error" && (
-          <p className="text-red-500 text-center">❌ Erreur d'envoi - Redirection...</p>
+          <p className="text-red-500 text-center">❌ Erreur d envoi - Redirection...</p>
         )}
 
         {/* Bouton de retour manuel */}
@@ -265,7 +265,7 @@ export default function PostPage() {
         </Button>
 
         <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
-          Système de contrôle d'accès • Version 1.1.0
+          Système de contrôle d accès • Version 1.1.0
         </div>
       </div>
     </div>
