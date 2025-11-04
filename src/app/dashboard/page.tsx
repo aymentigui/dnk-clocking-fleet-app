@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, LogIn, LogOut, QrCode, ArrowRight } from "lucide-react";
+import { Home, LogIn, LogOut, QrCode, ArrowRight, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Dashboard() {
   const [userType, setUserType] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -18,6 +21,30 @@ export default function Dashboard() {
     }
 
     setUserType(type);
+
+    // Vérifier les messages de scan
+    const scanSuccess = localStorage.getItem("scan_success_message");
+    const scanError = localStorage.getItem("scan_error_message");
+
+    if (scanSuccess) {
+      setSuccessMessage(scanSuccess);
+      localStorage.removeItem("scan_success_message");
+
+      // Supprimer le message après 5 secondes
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+    }
+
+    if (scanError) {
+      setErrorMessage(scanError);
+      localStorage.removeItem("scan_error_message");
+
+      // Supprimer le message après 5 secondes
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -46,6 +73,25 @@ export default function Dashboard() {
         <div className="flex justify-center mb-4">
           <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
         </div>
+
+        {/* Alertes de succès et d'erreur */}
+        {successMessage && (
+          <Alert className="mb-4 bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert className="mb-4 bg-red-50 border-red-200">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-4">
           {userType === "2" && (

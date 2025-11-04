@@ -3,19 +3,45 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { BrowserMultiFormatReader } from "@zxing/library";
-import { Home, Bus, User } from "lucide-react";
+import { Home, Bus, User, Camera, SwitchCamera } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function PostPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"bus" | "driver">("bus");
   const [busCode, setBusCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>("Scannez un bus 🚍");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [cameraId, setCameraId] = useState<string | null>(null);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [isCameraLoading, setIsCameraLoading] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
-  /** ✅ Fonction de scan stabilisée pour éviter les warnings de dépendance */
+  /** ✅ Obtenir la liste des caméras disponibles */
+  const getCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setAvailableCameras(videoDevices);
+      
+      // Préférer la caméra arrière (généralement celle qui n'est pas "front")
+      const backCamera = videoDevices.find(device => 
+        device.label.toLowerCase().includes('back') || 
+        device.label.toLowerCase().includes('arrière') ||
+        !device.label.toLowerCase().includes('front')
+      );
+      
+      return backCamera?.deviceId || videoDevices[0]?.deviceId || null;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des caméras:", error);
+      return null;
+    }
+  };
+
+  /** ✅ Fonction de scan stabilisée */
   const handleScan = useCallback(
     (code: string) => {
       if (step === "bus") {
@@ -30,6 +56,44 @@ export default function PostPage() {
   );
 
   /** ✅ Initialisation du scanner vidéo */
+  const initializeScanner = async (deviceId: string | null = null) => {
+    setIsCameraLoading(true);
+    
+    try {
+      const reader = new BrowserMultiFormatReader();
+      readerRef.current = reader;
+
+      // Arrêter le scanner précédent
+      reader.reset();
+
+      // Démarrer avec la caméra spécifiée
+      await reader.decodeFromVideoDevice(
+        deviceId, 
+        videoRef.current!, 
+        (result) => {
+          if (result) handleScan(result.getText());
+        }
+      );
+    } catch (error) {
+      console.error("Erreur d'initialisation du scanner:", error);
+      setMessage("❌ Erreur de caméra");
+    } finally {
+      setIsCameraLoading(false);
+    }
+  };
+
+  /** ✅ Changer de caméra */
+  const switchCamera = async () => {
+    if (availableCameras.length <= 1) return;
+    
+    const currentIndex = availableCameras.findIndex(cam => cam.deviceId === cameraId);
+    const nextIndex = (currentIndex + 1) % availableCameras.length;
+    const nextCamera = availableCameras[nextIndex];
+    
+    setCameraId(nextCamera.deviceId);
+    await initializeScanner(nextCamera.deviceId);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -37,15 +101,18 @@ export default function PostPage() {
       return;
     }
 
-    const reader = new BrowserMultiFormatReader();
-    readerRef.current = reader;
+    const init = async () => {
+      const preferredCameraId = await getCameras();
+      setCameraId(preferredCameraId);
+      await initializeScanner(preferredCameraId);
+    };
 
-    reader.decodeFromVideoDevice(null, videoRef.current!, (result) => {
-      if (result) handleScan(result.getText());
-    });
+    init();
 
     return () => {
-      reader.reset();
+      if (readerRef.current) {
+        readerRef.current.reset();
+      }
     };
   }, [handleScan]);
 
@@ -69,18 +136,24 @@ export default function PostPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Erreur d envoi");
+      if (!res.ok) throw new Error("Erreur d'envoi");
+      
       setStatus("success");
       setMessage("✅ Données envoyées avec succès !");
+      
+      localStorage.setItem("scan_success_message", "✅ Pointage effectué avec succès !");
       setTimeout(() => {
-        setStep("bus");
-        setBusCode(null);
-        setStatus("idle");
-        setMessage("Scannez un bus 🚍");
-      }, 5000);
+        router.push("/dashboard");
+      }, 1500);
+      
     } catch {
       setStatus("error");
-      setMessage("❌ Échec de l’envoi !");
+      setMessage("❌ Échec de l'envoi !");
+      
+      localStorage.setItem("scan_error_message", "❌ Erreur lors du pointage !");
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
     }
   };
 
@@ -130,25 +203,67 @@ export default function PostPage() {
           {message && <p className="text-sm text-gray-500 mt-1">{message}</p>}
         </div>
 
-        <video
-          ref={videoRef}
-          className="w-full border border-gray-300 rounded"
-          autoPlay
-          muted
-        />
+        {/* Contrôles de caméra */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center text-sm text-gray-600">
+            <Camera className="w-4 h-4 mr-2" />
+            {availableCameras.find(cam => cam.deviceId === cameraId)?.label || "Caméra"}
+          </div>
+          
+          {availableCameras.length > 1 && (
+            <Button
+              onClick={switchCamera}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <SwitchCamera className="w-4 h-4" />
+              Changer
+            </Button>
+          )}
+        </div>
+
+        {/* Zone vidéo */}
+        <div className="relative">
+          <video
+            ref={videoRef}
+            className="w-full border border-gray-300 rounded"
+            autoPlay
+            muted
+            playsInline
+          />
+          
+          {isCameraLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
+              <div className="text-center">
+                <Camera className="w-8 h-8 animate-pulse mx-auto text-gray-400" />
+                <p className="text-sm text-gray-500 mt-2">Initialisation de la caméra...</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {status === "sending" && (
           <p className="text-blue-500 text-center">⏳ Envoi en cours...</p>
         )}
         {status === "success" && (
-          <p className="text-green-500 text-center">✅ Envoi réussi</p>
+          <p className="text-green-500 text-center">✅ Envoi réussi - Redirection...</p>
         )}
         {status === "error" && (
-          <p className="text-red-500 text-center">❌ Erreur d’envoi</p>
+          <p className="text-red-500 text-center">❌ Erreur d'envoi - Redirection...</p>
         )}
 
+        {/* Bouton de retour manuel */}
+        <Button
+          onClick={() => router.push("/dashboard")}
+          variant="outline"
+          className="w-full"
+        >
+          Retour au Dashboard
+        </Button>
+
         <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
-          Système de contrôle d accès • Version 1.1.0
+          Système de contrôle d'accès • Version 1.1.0
         </div>
       </div>
     </div>
