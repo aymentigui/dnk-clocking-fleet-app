@@ -24,14 +24,14 @@ export default function PostPage() {
   const getCameras = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
       setAvailableCameras(videoDevices);
       
       // Préférer la caméra arrière (généralement celle qui n est pas "front")
       const backCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('arrière') ||
-        !device.label.toLowerCase().includes('front')
+        device.label.toLowerCase().includes("back") || 
+        device.label.toLowerCase().includes("arrière") ||
+        !device.label.toLowerCase().includes("front")
       );
       
       return backCamera?.deviceId || videoDevices[0]?.deviceId || null;
@@ -131,7 +131,7 @@ export default function PostPage() {
         },
         body: JSON.stringify({
           matricule: bus,
-          conducteur_id: conducteur,
+          conducteur_matricule: conducteur,
           type,
         }),
       });
