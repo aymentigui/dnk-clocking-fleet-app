@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import { Home, Bus, User } from "lucide-react";
@@ -9,35 +9,47 @@ import Image from "next/image";
 export default function PostPage() {
   const [step, setStep] = useState<"bus" | "driver">("bus");
   const [busCode, setBusCode] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>("Scannez un bus 🚍");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
+  /** ✅ Fonction de scan stabilisée pour éviter les warnings de dépendance */
+  const handleScan = useCallback(
+    (code: string) => {
+      if (step === "bus") {
+        setBusCode(code);
+        setStep("driver");
+        setMessage("✅ Bus scanné ! Maintenant scannez le chauffeur 👷‍♂️");
+      } else if (busCode) {
+        sendData(busCode, code);
+      }
+    },
+    [step, busCode]
+  );
+
+  /** ✅ Initialisation du scanner vidéo */
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) window.location.href = "/login";
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
     const reader = new BrowserMultiFormatReader();
     readerRef.current = reader;
 
-    reader.decodeFromVideoDevice(null, videoRef.current!, (result, error) => {
+    reader.decodeFromVideoDevice(null, videoRef.current!, (result) => {
       if (result) handleScan(result.getText());
     });
 
-    return () => reader.reset();
-  }, []);
+    return () => {
+      reader.reset();
+    };
+  }, [handleScan]);
 
-  const handleScan = (code: string) => {
-    if (step === "bus") {
-      setBusCode(code);
-      setStep("driver");
-      setMessage("✅ Bus scanné ! Maintenant scannez le chauffeur 👷‍♂️");
-    } else {
-      sendData(busCode!, code);
-    }
-  };
-
+  /** ✅ Envoi des données au backend */
   const sendData = async (bus: string, conducteur: string) => {
     setStatus("sending");
     const token = localStorage.getItem("token");
@@ -46,8 +58,15 @@ export default function PostPage() {
     try {
       const res = await fetch("https://dnk-clocking-fleet.vercel.app/api/admin/clocking", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ matricule: bus, conducteur_id: conducteur, type }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          matricule: bus,
+          conducteur_id: conducteur,
+          type,
+        }),
       });
 
       if (!res.ok) throw new Error("Erreur d envoi");
@@ -61,10 +80,11 @@ export default function PostPage() {
       }, 5000);
     } catch {
       setStatus("error");
-      setMessage("❌ Échec de l envoi !");
+      setMessage("❌ Échec de l’envoi !");
     }
   };
 
+  /** ✅ Déconnexion propre */
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
@@ -72,19 +92,30 @@ export default function PostPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="fixed top-0 w-full bg-white shadow-sm p-4 flex justify-between items-center">
         <div className="flex items-center">
           <Home className="w-5 h-5 text-blue-600 mr-2" />
           <span className="font-semibold text-gray-800">Système de pointage</span>
         </div>
-        <Button onClick={handleLogout} className="bg-gray-500 hover:bg-gray-600 text-white">
+        <Button
+          onClick={handleLogout}
+          className="bg-gray-500 hover:bg-gray-600 text-white"
+        >
           Déconnexion
         </Button>
       </div>
 
+      {/* Contenu principal */}
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 mt-16 space-y-6">
         <div className="flex justify-center">
-          <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
+          <Image
+            src="/logo-djamiaya.png"
+            alt="Logo"
+            width={240}
+            height={120}
+            priority
+          />
         </div>
 
         <div className="text-center">
@@ -96,17 +127,28 @@ export default function PostPage() {
           <p className="mt-2 text-lg font-semibold">
             {step === "bus" ? "Scannez le bus 🚍" : "Scannez le chauffeur 👷‍♂️"}
           </p>
-          <p className="text-sm text-gray-500 mt-1">{message}</p>
+          {message && <p className="text-sm text-gray-500 mt-1">{message}</p>}
         </div>
 
-        <video ref={videoRef} className="w-full border border-gray-300 rounded" />
+        <video
+          ref={videoRef}
+          className="w-full border border-gray-300 rounded"
+          autoPlay
+          muted
+        />
 
-        {status === "sending" && <p className="text-blue-500 text-center">⏳ Envoi en cours...</p>}
-        {status === "success" && <p className="text-green-500 text-center">✅ Envoi réussi</p>}
-        {status === "error" && <p className="text-red-500 text-center">❌ Erreur d envoi</p>}
+        {status === "sending" && (
+          <p className="text-blue-500 text-center">⏳ Envoi en cours...</p>
+        )}
+        {status === "success" && (
+          <p className="text-green-500 text-center">✅ Envoi réussi</p>
+        )}
+        {status === "error" && (
+          <p className="text-red-500 text-center">❌ Erreur d’envoi</p>
+        )}
 
         <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
-          Systeme de controle d acces • Version 1.1.0
+          Système de contrôle d accès • Version 1.1.0
         </div>
       </div>
     </div>
