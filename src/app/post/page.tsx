@@ -11,53 +11,113 @@ export default function PostPage() {
   const [driverCode, setDriverCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraError, setCameraError] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
   /** ✅ Démarrer le scan du bus */
-  const startBusScan = () => {
+  const startBusScan = async () => {
     setStep("scanning-bus");
     setBusCode(null);
     setDriverCode(null);
     setMessage("");
-    startCamera();
+    setCameraError("");
+    await startCamera();
   };
 
   /** ✅ Démarrer le scan du chauffeur */
-  const startDriverScan = () => {
+  const startDriverScan = async () => {
     setStep("scanning-driver");
     setMessage("");
-    startCamera();
+    setCameraError("");
+    await startCamera();
   };
 
   /** ✅ Démarrer la caméra */
-  const startCamera = () => {
-    if (readerRef.current) {
-      readerRef.current.reset();
-    }
-
-    const reader = new BrowserMultiFormatReader();
-    readerRef.current = reader;
-    setIsScanning(true);
-
-    reader.decodeFromVideoDevice(null, videoRef.current!, (result) => {
-      if (result) {
-        const code = result.getText();
-        handleScan(code);
+  const startCamera = async () => {
+    try {
+      // Arrêter la caméra existante
+      if (readerRef.current) {
+        readerRef.current.reset();
       }
-    }).catch((err) => {
-      console.error("Erreur caméra:", err);
-      setMessage("❌ Impossible d accéder à la caméra");
-    });
+
+      // Vérifier si les APIs sont supportées
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Votre navigateur ne supporte pas l accès à la caméra");
+      }
+
+      // Demander la permission d accéder à la caméra
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: "environment", // Préférer la caméra arrière
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+
+      // S assurer que la vidéo est prête
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true"); // Important pour iOS
+        
+        // Attendre que la vidéo soit chargée
+        await new Promise((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => {
+              resolve(true);
+            };
+          }
+        });
+
+        // Démarrer la lecture
+        await videoRef.current.play();
+      }
+
+      // Initialiser le lecteur QR code
+      const reader = new BrowserMultiFormatReader();
+      readerRef.current = reader;
+      setIsScanning(true);
+
+      // Démarrer la détection de QR codes
+      reader.decodeFromVideoDevice(null, videoRef.current!, (result, error) => {
+        if (result) {
+          const code = result.getText();
+          handleScan(code);
+        }
+        if (error) {
+          // Ignorer les erreurs de décodage continues (c est normal)
+          console.log("Décodage en cours...");
+        }
+      });
+
+    } catch (error) {
+      console.error("Erreur caméra:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Impossible d accéder à la caméra. Vérifiez les permissions.";
+      
+      setCameraError(errorMessage);
+      setMessage(`❌ ${errorMessage}`);
+      setStep("error");
+      stopCamera();
+    }
   };
 
   /** ✅ Arrêter la caméra */
   const stopCamera = () => {
     if (readerRef.current) {
       readerRef.current.reset();
-      setIsScanning(false);
+      readerRef.current = null;
     }
+    
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    
+    setIsScanning(false);
   };
 
   /** ✅ Gérer le scan */
@@ -77,8 +137,7 @@ export default function PostPage() {
   const sendData = async (bus: string, conducteur: string) => {
     setStep("sending");
     const token = localStorage.getItem("token");
-    const typeS = localStorage.getItem("type_s");
-    const type = typeS ? typeS : localStorage.getItem("type");
+    const type = localStorage.getItem("type_s");
 
     try {
       const res = await fetch("https://dnk-clocking-fleet.vercel.app/api/admin/clocking", {
@@ -111,19 +170,23 @@ export default function PostPage() {
 
   /** ✅ Nouveau scan */
   const handleNewScan = () => {
+    stopCamera();
     setStep("idle");
     setBusCode(null);
     setDriverCode(null);
     setMessage("");
+    setCameraError("");
   };
 
   /** ✅ Retour au dashboard */
   const goToDashboard = () => {
+    stopCamera();
     window.location.href = "/dashboard";
   };
 
   /** ✅ Déconnexion */
   const handleLogout = () => {
+    stopCamera();
     localStorage.clear();
     window.location.href = "/login";
   };
@@ -186,12 +249,35 @@ export default function PostPage() {
               <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le bus 🚍</h3>
               <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
             </div>
-            <video
-              ref={videoRef}
-              className="w-full border-4 border-blue-400 rounded-lg"
-              autoPlay
-              muted
-            />
+            
+            {cameraError ? (
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
+                <p className="text-red-600 font-medium">{cameraError}</p>
+                <Button
+                  onClick={startBusScan}
+                  className="mt-3 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Réessayer
+                </Button>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                className="w-full h-64 border-4 border-blue-400 rounded-lg bg-black"
+                autoPlay
+                muted
+                playsInline
+              />
+            )}
+            
+            <Button
+              onClick={stopCamera}
+              variant="outline"
+              className="w-full mt-2"
+            >
+              Arrêter la caméra
+            </Button>
           </div>
         )}
 
@@ -225,15 +311,39 @@ export default function PostPage() {
                 <p className="text-xs text-gray-600">Bus: <span className="font-bold text-blue-600">{busCode}</span></p>
               </div>
             </div>
-            <video
-              ref={videoRef}
-              className="w-full border-4 border-orange-400 rounded-lg"
-              autoPlay
-              muted
-            />
+            
+            {cameraError ? (
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
+                <p className="text-red-600 font-medium">{cameraError}</p>
+                <Button
+                  onClick={startDriverScan}
+                  className="mt-3 bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  Réessayer
+                </Button>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                className="w-full h-64 border-4 border-orange-400 rounded-lg bg-black"
+                autoPlay
+                muted
+                playsInline
+              />
+            )}
+            
+            <Button
+              onClick={stopCamera}
+              variant="outline"
+              className="w-full mt-2"
+            >
+              Arrêter la caméra
+            </Button>
           </div>
         )}
 
+        {/* Les autres états (sending, success, error) restent identiques */}
         {/* État: Envoi en cours */}
         {step === "sending" && (
           <div className="text-center space-y-6 py-8">
