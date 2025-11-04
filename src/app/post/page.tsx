@@ -12,7 +12,7 @@ export default function PostPage() {
   const [step, setStep] = useState<"idle" | "bus" | "driver" | "sending" | "complete">("idle")
   const [busCode, setBusCode] = useState<string | null>(null)
   const [driverCode, setDriverCode] = useState<string | null>(null)
-  const [message, setMessage] = useState<string>("Cliquez sur 'Démarrer le scan' pour commencer")
+  const [message, setMessage] = useState<string>("Cliquez sur  Démarrer le scan  pour commencer")
   const [status, setStatus] = useState<"idle" | "scanning" | "locked" | "sending" | "success" | "error">("idle")
   const [cameraId, setCameraId] = useState<string | null>(null)
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([])
@@ -76,7 +76,7 @@ export default function PostPage() {
         if (result) handleScan(result.getText())
       })
     } catch (error) {
-      console.error("Erreur d'initialisation du scanner:", error)
+      console.error("Erreur d initialisation du scanner:", error)
       setMessage("❌ Erreur de caméra")
       setStatus("idle")
     } finally {
@@ -132,7 +132,7 @@ export default function PostPage() {
         }),
       })
 
-      if (!res.ok) throw new Error("Erreur d'envoi")
+      if (!res.ok) throw new Error("Erreur d envoi")
 
       const data = await res.json()
       setStep("complete")
@@ -151,7 +151,7 @@ export default function PostPage() {
     } catch (error) {
       setStep("complete")
       setStatus("error")
-      setMessage("❌ Erreur lors de l'envoi des données")
+      setMessage("❌ Erreur lors de l envoi des données")
       localStorage.setItem("scan_error_message", "❌ Erreur lors du pointage!")
     }
   }
@@ -161,7 +161,7 @@ export default function PostPage() {
     setDriverCode(null)
     setStep("idle")
     setStatus("idle")
-    setMessage("Cliquez sur 'Démarrer le scan' pour commencer une nouvelle scan")
+    setMessage("Cliquez sur  Démarrer le scan  pour commencer une nouvelle scan")
     stopScanner()
   }
 
@@ -372,7 +372,7 @@ export default function PostPage() {
         </div>
 
         <div className="text-center text-xs text-gray-400 border-t pt-4">
-          Système de contrôle d'accès • Version 2.0.1
+          Système de contrôle d accès • Version 2.0.1
         </div>
       </div>
     </div>
