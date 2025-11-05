@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
 import { Home, Bus, User, CheckCircle, XCircle, Camera, CameraOff } from "lucide-react";
 import Footer from "@/components/footer";
+import Link from "next/link";
+import Header from "@/components/Header";
+import ErreurAlert from "./_componenet/erreur-alert";
+import SuccessAlert from "./_componenet/succes-alert";
 
 export default function PostPage() {
   const [step, setStep] = useState<"idle" | "scanning-bus" | "bus-scanned" | "scanning-driver" | "sending" | "success" | "error">("idle");
@@ -308,21 +312,6 @@ export default function PostPage() {
     window.location.href = "/dashboard";
   };
 
-  /** ✅ Déconnexion */
-  const handleLogout = () => {
-    stopCamera();
-    localStorage.clear();
-    window.location.href = "/login";
-  };
-
-  /** ✅ Vérification de l authentification */
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      window.location.href = "/login";
-    }
-  }, []);
-
   /** ✅ Nettoyage lors du démontage */
   useEffect(() => {
     return () => {
@@ -332,20 +321,8 @@ export default function PostPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
-      {/* Header */}
-      <div className="fixed top-0 w-full bg-white shadow-md p-4 flex justify-between items-center z-10">
-        <div className="flex items-center">
-          <Home className="w-5 h-5 text-blue-600 mr-2" />
-          <span className="font-semibold text-gray-800">Système de pointage</span>
-        </div>
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="text-gray-700 hover:bg-gray-100"
-        >
-          Déconnexion
-        </Button>
-      </div>
+
+      <Header stopCamera={stopCamera} />
 
       {/* Contenu principal */}
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-20 mb-6 space-y-6">
@@ -523,60 +500,17 @@ export default function PostPage() {
 
         {/* État: Succès */}
         {step === "success" && (
-          <div className="text-center space-y-6">
-            <CheckCircle className="w-24 h-24 mx-auto text-green-500" />
-            <h3 className="text-2xl font-bold text-green-600">✅ Succès !</h3>
-            <p className="text-gray-700">{message}</p>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Bus:</span>
-                <span className="font-bold text-gray-800">{busName}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Chauffeur:</span>
-                <span className="font-bold text-gray-800">{conducteurName}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Button
-                onClick={handleNewScan}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4"
-              >
-                Nouveau scan 🔄
-              </Button>
-              <Button
-                onClick={goToDashboard}
-                variant="outline"
-                className="w-full py-4"
-              >
-                Retour au tableau de bord 🏠
-              </Button>
-            </div>
-          </div>
+          <SuccessAlert
+            busName={busName}
+            conducteurName={conducteurName}
+            goToDashboard={goToDashboard}
+            handleNewScan={handleNewScan}
+            message={message} />
         )}
 
         {/* État: Erreur */}
         {step === "error" && (
-          <div className="text-center space-y-6">
-            <XCircle className="w-24 h-24 mx-auto text-red-500" />
-            <h3 className="text-2xl font-bold text-red-600">❌ Erreur</h3>
-            <p className="text-gray-700">{message}</p>
-            <div className="space-y-3">
-              <Button
-                onClick={handleNewScan}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4"
-              >
-                Réessayer 🔄
-              </Button>
-              <Button
-                onClick={goToDashboard}
-                variant="outline"
-                className="w-full py-4"
-              >
-                Retour au tableau de bord 🏠
-              </Button>
-            </div>
-          </div>
+          <ErreurAlert message={message} goToDashboard={goToDashboard} handleNewScan={handleNewScan} />
         )}
 
         <Footer />
