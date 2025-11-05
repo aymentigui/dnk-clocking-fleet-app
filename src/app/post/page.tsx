@@ -20,6 +20,9 @@ export default function PostPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isScanningEnabled, setIsScanningEnabled] = useState(true);
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   /** ✅ Configuration du lecteur QR code */
   const initializeReader = () => {
@@ -65,93 +68,137 @@ export default function PostPage() {
       }
 
       // Demander la permission d accéder à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
           facingMode: "environment", // Préférer la caméra arrière
           width: { ideal: 1280 },
           height: { ideal: 720 },
           aspectRatio: { ideal: 1.7777777778 }
-        } 
+        }
       });
 
       streamRef.current = stream;
 
       // S assurer que la vidéo est prête
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        
-        // Attendre que la vidéo soit chargée
-        await new Promise((resolve, reject) => {
-          if (!videoRef.current) {
-            reject(new Error("Élément vidéo non trouvé"));
-            return;
-          }
+      // if (videoRef.current) {
+      //   videoRef.current.srcObject = stream;
+      //   videoRef.current.setAttribute("playsinline", "true");
 
-          videoRef.current.onloadedmetadata = () => {
-            resolve(true);
-          };
+      //   // Attendre que la vidéo soit chargée
+      //   await new Promise((resolve, reject) => {
+      //     if (!videoRef.current) {
+      //       reject(new Error("Élément vidéo non trouvé"));
+      //       return;
+      //     }
 
-          videoRef.current.onerror = () => {
-            reject(new Error("Erreur lors du chargement de la vidéo"));
-          };
+      //     videoRef.current.onloadedmetadata = () => {
+      //       resolve(true);
+      //     };
 
-          // Timeout de sécurité
-          setTimeout(() => {
-            resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
-          }, 2000);
-        });
+      //     videoRef.current.onerror = () => {
+      //       reject(new Error("Erreur lors du chargement de la vidéo"));
+      //     };
 
-        // Démarrer la lecture
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.warn("Erreur play:", playError);
-          // Continuer malgré l erreur de play
-        }
+      //     // Timeout de sécurité
+      //     setTimeout(() => {
+      //       resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
+      //     }, 2000);
+      //   });
 
-        // Initialiser le lecteur QR code
-        const reader = initializeReader();
-        setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
+      //   // Démarrer la lecture
+      //   try {
+      //     await videoRef.current.play();
+      //   } catch (playError) {
+      //     console.warn("Erreur play:", playError);
+      //     // Continuer malgré l erreur de play
+      //   }
 
-        // Démarrer la détection de QR codes avec gestion d erreur améliorée
-        const startDecoding = () => {
+      //   // Initialiser le lecteur QR code
+      //   const reader = initializeReader();
+      //   setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
+
+      //   // Démarrer la détection de QR codes avec gestion d erreur améliorée
+      //   const startDecoding = () => {
+      //     try {
+      //       reader.decodeFromVideoDevice(
+      //         null,
+      //         videoRef.current!,
+      //         (result, error) => {
+      //           if (result) {
+      //             console.log("QR code détecté:", result.getText());
+      //             const code = result.getText();
+      //             handleScan(code);
+      //           }
+
+      //           if (error) {
+      //             // Ignorer les erreurs de décodage normales (pas de QR code visible)
+      //             if (!error.message?.includes("NotFound")) {
+      //               console.log("Décodage en cours...", error.message);
+      //             }
+      //           }
+      //         }
+      //       );
+      //     } catch (decodeError) {
+      //       console.error("Erreur décodage:", decodeError);
+      //       setScanningStatus("Erreur de scan - Réessayez");
+      //     }
+      //   };
+
+      //   // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
+      //   setTimeout(startDecoding, 1000);
+
+      // }
+
+      const codeReader = new BrowserMultiFormatReader();
+      codeReaderRef.current = codeReader;
+      const startScanner = async () => {
+        if (videoRef.current && isScanning) {
           try {
-            reader.decodeFromVideoDevice(
-              null, 
-              videoRef.current!, 
+            await codeReader.decodeFromVideoDevice(
+              null,
+              videoRef.current,
               (result, error) => {
+                if (!isScanningEnabled) return;
+
                 if (result) {
-                  console.log("QR code détecté:", result.getText());
                   const code = result.getText();
+                  console.log("QR Code Detected:", code);
                   handleScan(code);
+
+                  // Disable scanning for 10 seconds after successful scan
+                  setIsScanningEnabled(false);
+
+                  setTimeout(() => {
+                    console.log("Re-enabling scanning after delay");
+                    setIsScanningEnabled(true);
+                  }, 10000);
                 }
-                
-                if (error) {
-                  // Ignorer les erreurs de décodage normales (pas de QR code visible)
-                  if (!error.message?.includes("NotFound")) {
-                    console.log("Décodage en cours...", error.message);
-                  }
+
+                if (error && error.name !== "NotFoundException") {
+                  console.error("Error while scanning QR code:", error);
+                  setMessage("Error: " + error.message);
                 }
               }
             );
-          } catch (decodeError) {
-            console.error("Erreur décodage:", decodeError);
-            setScanningStatus("Erreur de scan - Réessayez");
+          } catch (err) {
+            console.error("Failed to start scanner:", err);
+            setMessage(
+              "Failed to access camera: " +
+              (err instanceof Error ? err.message : "Unknown error")
+            );
           }
-        };
+        }
+      };
 
-        // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
-        setTimeout(startDecoding, 1000);
+      startScanner();
 
-      }
 
     } catch (error) {
       console.error("Erreur caméra:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : "Impossible d accéder à la caméra. Vérifiez les permissions.";
-      
+
       setCameraError(errorMessage);
       setMessage(`❌ ${errorMessage}`);
       setStep("error");
@@ -195,7 +242,7 @@ export default function PostPage() {
   };
 
   /** ✅ Gérer le scan */
-  const handleScan = (code: string) => {  
+  const handleScan = (code: string) => {
     // Validation basique du code
     if (!code || code.trim().length === 0) {
       setScanningStatus("QR code invalide - Réessayez");
@@ -221,8 +268,8 @@ export default function PostPage() {
 
     try {
       readerRef.current.decodeFromVideoDevice(
-        null, 
-        videoRef.current, 
+        null,
+        videoRef.current,
         (result, error) => {
           if (result) {
             const code = result.getText();
@@ -262,7 +309,7 @@ export default function PostPage() {
         setMessage(data.data.message || "Erreur lors de l envoi des données");
       } else {
         setConducteurName(data.data.conducteur_name || "");
-        setBusName(data.data.vehicle || "");  
+        setBusName(data.data.vehicle || "");
         setStep("success");
         setMessage(data.message || "Données envoyées avec succès !");
       }
@@ -330,7 +377,7 @@ export default function PostPage() {
 
       {/* Contenu principal */}
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-20 mb-6 space-y-6">
-        
+
         {/* État: Idle - Démarrer le scan */}
         {step === "idle" && (
           <div className="text-center space-y-6">
@@ -357,7 +404,7 @@ export default function PostPage() {
                 <p className="text-xs text-blue-600 font-medium">{scanningStatus}</p>
               </div>
             </div>
-            
+
             {cameraError ? (
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
@@ -384,7 +431,7 @@ export default function PostPage() {
                     <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <Button
                     onClick={forceScanDetection}
@@ -441,7 +488,7 @@ export default function PostPage() {
                 <p className="text-xs text-orange-600 font-medium">{scanningStatus}</p>
               </div>
             </div>
-            
+
             {cameraError ? (
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
@@ -468,7 +515,7 @@ export default function PostPage() {
                     <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <Button
                     onClick={forceScanDetection}
