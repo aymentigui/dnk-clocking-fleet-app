@@ -15,7 +15,6 @@ export default function PostPage() {
   const [scanningStatus, setScanningStatus] = useState<string>("Prêt à scanner...");
   const [conducteurName, setConducteurName] = useState<string>("");
   const [busName, setBusName] = useState<string>("");
-  const [isScanningEnabled,  setIsScanningEnabled]= useState<boolean>(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -113,7 +112,6 @@ export default function PostPage() {
 
         // Initialiser le lecteur QR code
         const reader = initializeReader();
-        setIsScanning(true);
         setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
 
         // Démarrer la détection de QR codes avec gestion d erreur améliorée
@@ -124,18 +122,26 @@ export default function PostPage() {
               videoRef.current!, 
               (result, error) => {
                 if (result) {
-                  if(!isScanningEnabled) return; // Ignorer si le scan est désactivé
                   console.log("QR code détecté:", result.getText());
                   const code = result.getText();
-                  setIsScanningEnabled(false); // Désactiver les scans supplémentaires
                   handleScan(code);
                 }
                 
                 if (error) {
-                  // Ignorer les erreurs de décodage normales (pas de QR code visible)
                   if (!error.message?.includes("NotFound")) {
                     console.log("Décodage en cours...", error.message);
                   }
+                }
+              }
+            );
+            if (!readerRef.current || !videoRef.current) return;
+            readerRef.current.decodeFromVideoDevice(
+              null, 
+              videoRef.current, 
+              (result, error) => {
+                if (result) {
+                  const code = result.getText();
+                  handleScan(code);
                 }
               }
             );
@@ -143,6 +149,7 @@ export default function PostPage() {
             console.error("Erreur décodage:", decodeError);
             setScanningStatus("Erreur de scan - Réessayez");
           }
+
         };
 
         // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
@@ -195,7 +202,6 @@ export default function PostPage() {
       clearTimeout(scanTimeoutRef.current);
     }
 
-    setIsScanning(false);
     setScanningStatus("Caméra arrêtée");
   };
 
@@ -204,7 +210,6 @@ export default function PostPage() {
     // Validation basique du code
     if (!code || code.trim().length === 0) {
       setScanningStatus("QR code invalide - Réessayez");
-      setIsScanningEnabled(true);
       return;
     }
 
@@ -219,7 +224,6 @@ export default function PostPage() {
       stopCamera();
       sendData(busCode!, code);
     }
-    setIsScanningEnabled(true); // Réactiver le scan pour la prochaine fois
   };
 
   /** ✅ Forcer la détection manuellement (fallback) */
