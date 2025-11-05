@@ -206,7 +206,7 @@ export default function PostPage() {
     setScanningStatus("QR code détecté !");
     alert("QR code détecté : " + code);
 
-    if (step === "scanning-bus") {
+    if (step !== "scanning-driver") {
       setBusCode(code);
       setStep("bus-scanned");
       stopCamera();
