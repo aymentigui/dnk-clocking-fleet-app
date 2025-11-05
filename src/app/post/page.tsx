@@ -126,6 +126,7 @@ export default function PostPage() {
                   console.log("QR code détecté:", result.getText());
                   const code = result.getText();
                   handleScan(code);
+                  return;
                 }
                 
                 if (error) {
@@ -197,9 +198,7 @@ export default function PostPage() {
   };
 
   /** ✅ Gérer le scan */
-  const handleScan = (code: string) => {
-    console.log("Code scanné:", code);
-    
+  const handleScan = (code: string) => {  
     // Validation basique du code
     if (!code || code.trim().length === 0) {
       setScanningStatus("QR code invalide - Réessayez");
