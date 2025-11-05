@@ -3,19 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
-import { Home, Bus, User, CheckCircle, XCircle, Camera, CameraOff } from "lucide-react";
-import Footer from "@/components/footer";
-import Link from "next/link";
+import { Bus } from "lucide-react";
 import Header from "@/components/Header";
 import ErreurAlert from "./_componenet/erreur-alert";
 import SuccessAlert from "./_componenet/succes-alert";
+import Footer from "@/components/Footer";
+import BusScanned from "./_componenet/bus-scanned";
+import ScanningBus from "./_componenet/scanning-bus";
+import ScanningDriver from "./_componenet/scanning-driver";
 
 export default function PostPage() {
   const [step, setStep] = useState<"idle" | "scanning-bus" | "bus-scanned" | "scanning-driver" | "sending" | "success" | "error">("idle");
   const [busCode, setBusCode] = useState<string | null>(null);
   const [driverCode, setDriverCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string>("");
   const [scanningStatus, setScanningStatus] = useState<string>("Prêt à scanner...");
   const [conducteurName, setConducteurName] = useState<string>("");
@@ -344,148 +345,32 @@ export default function PostPage() {
 
         {/* État: Scan du bus en cours */}
         {step === "scanning-bus" && (
-          <div className="space-y-4">
-            <div className="text-center">
-              <Bus className="w-16 h-16 mx-auto text-blue-500 animate-pulse" />
-              <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le bus 🚍</h3>
-              <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
-              <div className="mt-2 p-2 bg-blue-50 rounded">
-                <p className="text-xs text-blue-600 font-medium">{scanningStatus}</p>
-              </div>
-            </div>
-
-            {cameraError ? (
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
-                <p className="text-red-600 font-medium">{cameraError}</p>
-                <Button
-                  onClick={startBusScan}
-                  className="mt-3 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Réessayer
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <video
-                    ref={videoRef}
-                    className="w-full h-64 border-4 border-blue-400 rounded-lg bg-black"
-                    autoPlay
-                    muted
-                    playsInline
-                  />
-                  {/* Overlay pour aider au cadrage */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={forceScanDetection}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    Forcer la détection
-                  </Button>
-                  <Button
-                    onClick={stopCamera}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <CameraOff className="w-4 h-4 mr-2" />
-                    Arrêter
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          <ScanningBus
+            cameraError={cameraError}
+            forceScanDetection={forceScanDetection}
+            scanningStatus={scanningStatus}
+            startBusScan={startBusScan}
+            stopCamera={stopCamera}
+            videoRef={videoRef}
+          />
         )}
 
         {/* État: Bus scanné */}
         {step === "bus-scanned" && (
-          <div className="text-center space-y-6">
-            <CheckCircle className="w-20 h-20 mx-auto text-green-500" />
-            <h3 className="text-xl font-bold text-gray-800">✅ Bus scanné avec succès !</h3>
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600">Matricule du bus</p>
-              <p className="text-2xl font-bold text-blue-600">{busCode}</p>
-            </div>
-            <p className="text-gray-600">Maintenant, scannez le QR code du chauffeur</p>
-            <Button
-              onClick={startDriverScan}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-6 text-lg"
-            >
-              Scanner le chauffeur 👷‍♂️
-            </Button>
-          </div>
+          <BusScanned busCode={busCode} startDriverScan={startDriverScan} />
         )}
 
         {/* État: Scan du chauffeur en cours */}
         {step === "scanning-driver" && (
-          <div className="space-y-4">
-            <div className="text-center">
-              <User className="w-16 h-16 mx-auto text-orange-500 animate-pulse" />
-              <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le chauffeur 👷‍♂️</h3>
-              <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
-              <div className="mt-2 bg-blue-50 border border-blue-200 rounded p-2">
-                <p className="text-xs text-gray-600">Bus: <span className="font-bold text-blue-600">{busCode}</span></p>
-              </div>
-              <div className="mt-2 p-2 bg-orange-50 rounded">
-                <p className="text-xs text-orange-600 font-medium">{scanningStatus}</p>
-              </div>
-            </div>
-
-            {cameraError ? (
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
-                <p className="text-red-600 font-medium">{cameraError}</p>
-                <Button
-                  onClick={startDriverScan}
-                  className="mt-3 bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  Réessayer
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <video
-                    ref={videoRef}
-                    className="w-full h-64 border-4 border-orange-400 rounded-lg bg-black"
-                    autoPlay
-                    muted
-                    playsInline
-                  />
-                  {/* Overlay pour aider au cadrage */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={forceScanDetection}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    Forcer la détection
-                  </Button>
-                  <Button
-                    onClick={stopCamera}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <CameraOff className="w-4 h-4 mr-2" />
-                    Arrêter
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          <ScanningDriver
+            busCode={busCode}
+            cameraError={cameraError}
+            forceScanDetection={forceScanDetection}
+            scanningStatus={scanningStatus}
+            startDriverScan={startDriverScan}
+            stopCamera={stopCamera}
+            videoRef={videoRef}
+          />
         )}
 
         {/* Les autres états restent similaires */}
