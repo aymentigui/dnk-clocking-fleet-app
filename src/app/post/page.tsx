@@ -7,7 +7,7 @@ import { Bus } from "lucide-react";
 import Header from "@/components/Header";
 import ErreurAlert from "./_componenet/erreur-alert";
 import SuccessAlert from "./_componenet/succes-alert";
-import Footer from "@/components/Footer";
+import Footer from "@/components/footer";
 import BusScanned from "./_componenet/bus-scanned";
 import ScanningBus from "./_componenet/scanning-bus";
 import ScanningDriver from "./_componenet/scanning-driver";
