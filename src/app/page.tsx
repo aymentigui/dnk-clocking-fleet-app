@@ -1,18 +1,23 @@
+"use client";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
+  const router= useRouter()
+
+
+  useEffect(() => {
+    setTimeout(() => {
+      router.push("/admin");
+    }, 1000);
+
+
+  }, []);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="flex justify-center mb-4">
-        <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
-      </div>
-      <h1 className="text-2xl font-semibold">Bienvenue au Système de Pointage DJAMIAYA</h1>
-      <a
-        href="/dashboard"
-        className="mt-4 px-6 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-      >
-        Aller au tableau de bord
-      </a>
-    </main>
+    <div className="h-screen w-full  flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-foreground"></div>
+    </div>
   );
 }
