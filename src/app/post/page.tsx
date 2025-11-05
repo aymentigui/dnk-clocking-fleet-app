@@ -204,12 +204,15 @@ export default function PostPage() {
     }
 
     setScanningStatus("QR code détecté !");
-    alert("QR code détecté : " + code);
 
-    if (step !== "scanning-driver") {
+    if (step === "scanning-bus") {
+      alert("QR code détecté : " + code);
       setBusCode(code);
+      alert(1)
       setStep("bus-scanned");
+      alert(2)
       stopCamera();
+      alert(3)
     } else if (step === "scanning-driver") {
       setDriverCode(code);
       stopCamera();
