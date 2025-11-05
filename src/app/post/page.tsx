@@ -34,31 +34,46 @@ export default function PostPage() {
     return reader;
   };
 
+  useEffect(() => {
+    if (step === "scanning-bus") {
+      const start = async () => {
+        setBusCode(null);
+        setDriverCode(null);
+        setMessage("");
+        setCameraError("");
+        setScanningStatus("Recherche de QR code...");
+        await startCamera();
+      }
+      start();
+    }else if (step === "scanning-driver") {
+      const start = async () => {
+        setMessage("");
+        setCameraError("");
+        setScanningStatus("Recherche de QR code...");
+        await startCamera();
+      }
+      start();
+    }
+    
+    return () => {
+      // Nettoyage si le step change
+      stopCamera();
+    }
+  }, [step]);
+
   /** ✅ Démarrer le scan du bus */
   const startBusScan = async () => {
     setStep("scanning-bus");
-    setBusCode(null);
-    setDriverCode(null);
-    setMessage("");
-    setCameraError("");
-    setScanningStatus("Recherche de QR code...");
-    await startCamera();
   };
 
   /** ✅ Démarrer le scan du chauffeur */
   const startDriverScan = async () => {
     setStep("scanning-driver");
-    setMessage("");
-    setCameraError("");
-    setScanningStatus("Recherche de QR code...");
-    await startCamera();
   };
 
   /** ✅ Démarrer la caméra */
   const startCamera = async () => {
     try {
-      // Ajouter un délai de 0.500 secondes avant de continuer
-      await new Promise((resolve) => setTimeout(resolve, 500));
       // Arrêter la caméra existante
       stopCamera();
 
@@ -68,13 +83,13 @@ export default function PostPage() {
       }
 
       // Demander la permission d accéder à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
           facingMode: "environment", // Préférer la caméra arrière
           width: { ideal: 1280 },
           height: { ideal: 720 },
           aspectRatio: { ideal: 1.7777777778 }
-        } 
+        }
       });
 
       streamRef.current = stream;
@@ -83,7 +98,7 @@ export default function PostPage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute("playsinline", "true");
-        
+
         // Attendre que la vidéo soit chargée
         await new Promise((resolve, reject) => {
           if (!videoRef.current) {
@@ -121,15 +136,15 @@ export default function PostPage() {
         const startDecoding = () => {
           try {
             reader.decodeFromVideoDevice(
-              null, 
-              videoRef.current!, 
+              null,
+              videoRef.current!,
               (result, error) => {
                 if (result) {
                   console.log("QR code détecté:", result.getText());
                   const code = result.getText();
                   handleScan(code);
                 }
-                
+
                 if (error) {
                   // Ignorer les erreurs de décodage normales (pas de QR code visible)
                   if (!error.message?.includes("NotFound")) {
@@ -151,10 +166,10 @@ export default function PostPage() {
 
     } catch (error) {
       console.error("Erreur caméra:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : "Impossible d accéder à la caméra. Vérifiez les permissions.";
-      
+
       setCameraError(errorMessage);
       setMessage(`❌ ${errorMessage}`);
       setStep("error");
@@ -198,7 +213,7 @@ export default function PostPage() {
   };
 
   /** ✅ Gérer le scan */
-  const handleScan = (code: string) => {  
+  const handleScan = (code: string) => {
     // Validation basique du code
     if (!code || code.trim().length === 0) {
       setScanningStatus("QR code invalide - Réessayez");
@@ -225,8 +240,8 @@ export default function PostPage() {
 
     try {
       readerRef.current.decodeFromVideoDevice(
-        null, 
-        videoRef.current, 
+        null,
+        videoRef.current,
         (result, error) => {
           if (result) {
             const code = result.getText();
@@ -266,7 +281,7 @@ export default function PostPage() {
         setMessage(data.data.message || "Erreur lors de l envoi des données");
       } else {
         setConducteurName(data.data.conducteur_name || "");
-        setBusName(data.data.vehicle || "");  
+        setBusName(data.data.vehicle || "");
         setStep("success");
         setMessage(data.message || "Données envoyées avec succès !");
       }
@@ -334,7 +349,7 @@ export default function PostPage() {
 
       {/* Contenu principal */}
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-20 mb-6 space-y-6">
-        
+
         {/* État: Idle - Démarrer le scan */}
         {step === "idle" && (
           <div className="text-center space-y-6">
@@ -361,7 +376,7 @@ export default function PostPage() {
                 <p className="text-xs text-blue-600 font-medium">{scanningStatus}</p>
               </div>
             </div>
-            
+
             {cameraError ? (
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
@@ -388,7 +403,7 @@ export default function PostPage() {
                     <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <Button
                     onClick={forceScanDetection}
@@ -445,7 +460,7 @@ export default function PostPage() {
                 <p className="text-xs text-orange-600 font-medium">{scanningStatus}</p>
               </div>
             </div>
-            
+
             {cameraError ? (
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <XCircle className="w-12 h-12 mx-auto text-red-500 mb-2" />
@@ -472,7 +487,7 @@ export default function PostPage() {
                     <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg opacity-70"></div>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <Button
                     onClick={forceScanDetection}
