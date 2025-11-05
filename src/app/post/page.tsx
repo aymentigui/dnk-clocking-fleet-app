@@ -45,7 +45,7 @@ export default function PostPage() {
         await startCamera();
       }
       start();
-    }else if (step === "scanning-driver") {
+    } else if (step === "scanning-driver") {
       const start = async () => {
         setMessage("");
         setCameraError("");
@@ -54,7 +54,7 @@ export default function PostPage() {
       }
       start();
     }
-    
+
     return () => {
       // Nettoyage si le step change
       stopCamera();
@@ -231,6 +231,12 @@ export default function PostPage() {
       setDriverCode(code);
       stopCamera();
       sendData(busCode!, code);
+    } else if (step === "idle") {
+      setBusCode(null);
+      setDriverCode(null);
+      setMessage("");
+      setCameraError("");
+      setScanningStatus("Prêt à scanner...");
     }
   };
 
@@ -295,11 +301,6 @@ export default function PostPage() {
   const handleNewScan = () => {
     stopCamera();
     setStep("idle");
-    setBusCode(null);
-    setDriverCode(null);
-    setMessage("");
-    setCameraError("");
-    setScanningStatus("Prêt à scanner...");
   };
 
   /** ✅ Retour au dashboard */
