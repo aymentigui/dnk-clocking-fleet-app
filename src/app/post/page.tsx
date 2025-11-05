@@ -57,6 +57,8 @@ export default function PostPage() {
   /** ✅ Démarrer la caméra */
   const startCamera = async () => {
     try {
+      // Ajouter un délai de 0.500 secondes avant de continuer
+      await new Promise((resolve) => setTimeout(resolve, 500));
       // Arrêter la caméra existante
       stopCamera();
 
