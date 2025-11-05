@@ -13,6 +13,8 @@ export default function PostPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string>("");
   const [scanningStatus, setScanningStatus] = useState<string>("Prêt à scanner...");
+  const [conducteurName, setConducteurName] = useState<string>("");
+  const [busName, setBusName] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -244,7 +246,7 @@ export default function PostPage() {
     const type = localStorage.getItem("type_s");
 
     try {
-      const res = await fetch("https://dnk.aimen-blog.com/api/admin/clocking", {
+      const res = await fetch("http://localhost:3000/api/admin/clocking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -263,6 +265,8 @@ export default function PostPage() {
         setStep("error");
         setMessage(data.message || "Erreur lors de l envoi des données");
       } else {
+        setConducteurName(data.conducteur_name || "");
+        setBusName(data.vehicle || "");  
         setStep("success");
         setMessage(data.message || "Données envoyées avec succès !");
       }
@@ -511,11 +515,11 @@ export default function PostPage() {
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Bus:</span>
-                <span className="font-bold text-gray-800">{busCode}</span>
+                <span className="font-bold text-gray-800">{busName}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Chauffeur:</span>
-                <span className="font-bold text-gray-800">{driverCode}</span>
+                <span className="font-bold text-gray-800">{conducteurName}</span>
               </div>
             </div>
             <div className="space-y-3">
