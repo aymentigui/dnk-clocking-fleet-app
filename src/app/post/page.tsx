@@ -15,6 +15,7 @@ export default function PostPage() {
   const [scanningStatus, setScanningStatus] = useState<string>("Prêt à scanner...");
   const [conducteurName, setConducteurName] = useState<string>("");
   const [busName, setBusName] = useState<string>("");
+  const [isScanningEnabled,  setIsScanningEnabled]= useState<boolean>(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -123,8 +124,10 @@ export default function PostPage() {
               videoRef.current!, 
               (result, error) => {
                 if (result) {
+                  if(!isScanningEnabled) return; // Ignorer si le scan est désactivé
                   console.log("QR code détecté:", result.getText());
                   const code = result.getText();
+                  setIsScanningEnabled(false); // Désactiver les scans supplémentaires
                   handleScan(code);
                 }
                 
@@ -215,6 +218,7 @@ export default function PostPage() {
       stopCamera();
       sendData(busCode!, code);
     }
+    setIsScanningEnabled(true); // Réactiver le scan pour la prochaine fois
   };
 
   /** ✅ Forcer la détection manuellement (fallback) */
