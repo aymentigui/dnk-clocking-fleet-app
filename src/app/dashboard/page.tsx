@@ -108,10 +108,10 @@ export default function Dashboard() {
           {userType === "3" && (
             <>
               <Button onClick={() => goToScan("4")} className="w-full bg-green-500 hover:bg-green-600 flex justify-between px-4 py-6 text-white">
-                <LogIn /> <span>Entrée spéciale (type 4)</span> <ArrowRight />
+                <LogIn /> <span>Entrée spéciale</span> <ArrowRight />
               </Button>
               <Button onClick={() => goToScan("3")} className="w-full bg-orange-500 hover:bg-orange-600 flex justify-between px-4 py-6 text-white">
-                <LogOut /> <span>Sortie spéciale (type 3)</span> <ArrowRight />
+                <LogOut /> <span>Sortie spéciale</span> <ArrowRight />
               </Button>
             </>
           )}

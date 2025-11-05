@@ -126,7 +126,6 @@ export default function PostPage() {
                   console.log("QR code détecté:", result.getText());
                   const code = result.getText();
                   handleScan(code);
-                  return;
                 }
                 
                 if (error) {
