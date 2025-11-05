@@ -263,10 +263,10 @@ export default function PostPage() {
 
       if (!res.ok) {
         setStep("error");
-        setMessage(data.message || "Erreur lors de l envoi des données");
+        setMessage(data.data.message || "Erreur lors de l envoi des données");
       } else {
-        setConducteurName(data.conducteur_name || "");
-        setBusName(data.vehicle || "");  
+        setConducteurName(data.data.conducteur_name || "");
+        setBusName(data.data.vehicle || "");  
         setStep("success");
         setMessage(data.message || "Données envoyées avec succès !");
       }
