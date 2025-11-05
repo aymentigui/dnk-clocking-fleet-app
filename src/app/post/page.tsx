@@ -54,120 +54,51 @@ export default function PostPage() {
   };
 
   /** ✅ Démarrer la caméra */
+  /** ✅ Démarrer la caméra */
   const startCamera = async () => {
-    try {
-      // Arrêter la caméra existante
-      stopCamera();
+    // Arrêter la caméra existante
+    stopCamera();
 
-      // Vérifier si les APIs sont supportées
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Votre navigateur ne supporte pas l accès à la caméra");
-      }
+    // Initialiser le lecteur QR code
+    const codeReader = new BrowserMultiFormatReader();
+    readerRef.current = codeReader;
 
-      // Demander la permission d accéder à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: "environment", // Préférer la caméra arrière
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          aspectRatio: { ideal: 1.7777777778 }
-        } 
-      });
+    setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
+    setIsScanning(true);
 
-      streamRef.current = stream;
-
-      // S assurer que la vidéo est prête
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        
-        // Attendre que la vidéo soit chargée
-        await new Promise((resolve, reject) => {
-          if (!videoRef.current) {
-            reject(new Error("Élément vidéo non trouvé"));
-            return;
-          }
-
-          videoRef.current.onloadedmetadata = () => {
-            resolve(true);
-          };
-
-          videoRef.current.onerror = () => {
-            reject(new Error("Erreur lors du chargement de la vidéo"));
-          };
-
-          // Timeout de sécurité
-          setTimeout(() => {
-            resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
-          }, 2000);
-        });
-
-        // Démarrer la lecture
+    const startScanner = async () => {
+      if (videoRef.current && isScanning) {
         try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.warn("Erreur play:", playError);
-          // Continuer malgré l erreur de play
+          await codeReader.decodeFromVideoDevice(
+            null,
+            videoRef.current,
+            (result, error) => {
+              if (result) {
+                const scannedData = result.getText();
+                console.log("QR Code détecté:", scannedData);
+                handleScan(scannedData);
+              }
+              if (error && error.name !== "NotFoundException") {
+                console.error("Erreur lors du scan QR code:", error);
+                if (!cameraError) {
+                  setCameraError("Erreur de scan: " + error.message);
+                }
+              }
+            }
+          );
+        } catch (err) {
+          console.error("Échec du démarrage du scanner:", err);
+          const errorMessage = err instanceof Error 
+            ? err.message 
+            : "Erreur inconnue";
+          setCameraError("Impossible d accéder à la caméra: " + errorMessage);
+          setMessage(`❌ Impossible d accéder à la caméra: ${errorMessage}`);
+          setStep("error");
         }
-
-        // Initialiser le lecteur QR code
-        const reader = initializeReader();
-        setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
-
-        // Démarrer la détection de QR codes avec gestion d erreur améliorée
-        const startDecoding = () => {
-          try {
-            reader.decodeFromVideoDevice(
-              null, 
-              videoRef.current!, 
-              (result, error) => {
-                if (result) {
-                  console.log("QR code détecté:", result.getText());
-                  const code = result.getText();
-                  handleScan(code);
-                }
-                
-                if (error) {
-                  if (!error.message?.includes("NotFound")) {
-                    console.log("Décodage en cours...", error.message);
-                  }
-                }
-              }
-            );
-            if (!readerRef.current || !videoRef.current) return;
-            readerRef.current.decodeFromVideoDevice(
-              null, 
-              videoRef.current, 
-              (result, error) => {
-                if (result) {
-                  const code = result.getText();
-                  handleScan(code);
-                }
-              }
-            );
-          } catch (decodeError) {
-            console.error("Erreur décodage:", decodeError);
-            setScanningStatus("Erreur de scan - Réessayez");
-          }
-
-        };
-
-        // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
-        setTimeout(startDecoding, 1000);
-
       }
+    };
 
-    } catch (error) {
-      console.error("Erreur caméra:", error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Impossible d accéder à la caméra. Vérifiez les permissions.";
-      
-      setCameraError(errorMessage);
-      setMessage(`❌ ${errorMessage}`);
-      setStep("error");
-      stopCamera();
-    }
+    startScanner();
   };
 
   /** ✅ Arrêter la caméra */
