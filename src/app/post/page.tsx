@@ -204,6 +204,7 @@ export default function PostPage() {
     // Validation basique du code
     if (!code || code.trim().length === 0) {
       setScanningStatus("QR code invalide - Réessayez");
+      setIsScanningEnabled(true);
       return;
     }
 
