@@ -244,7 +244,7 @@ export default function PostPage() {
     const type = localStorage.getItem("type_s");
 
     try {
-      const res = await fetch("https://dnk-clocking-fleet.vercel.app/api/admin/clocking", {
+      const res = await fetch("https://dnk.aimen-blog.com/api/admin/clocking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
