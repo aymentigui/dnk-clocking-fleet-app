@@ -80,117 +80,116 @@ export default function PostPage() {
       streamRef.current = stream;
 
       // S assurer que la vidéo est prête
-      // if (videoRef.current) {
-      //   videoRef.current.srcObject = stream;
-      //   videoRef.current.setAttribute("playsinline", "true");
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true");
 
-      //   // Attendre que la vidéo soit chargée
-      //   await new Promise((resolve, reject) => {
-      //     if (!videoRef.current) {
-      //       reject(new Error("Élément vidéo non trouvé"));
-      //       return;
-      //     }
-
-      //     videoRef.current.onloadedmetadata = () => {
-      //       resolve(true);
-      //     };
-
-      //     videoRef.current.onerror = () => {
-      //       reject(new Error("Erreur lors du chargement de la vidéo"));
-      //     };
-
-      //     // Timeout de sécurité
-      //     setTimeout(() => {
-      //       resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
-      //     }, 2000);
-      //   });
-
-      //   // Démarrer la lecture
-      //   try {
-      //     await videoRef.current.play();
-      //   } catch (playError) {
-      //     console.warn("Erreur play:", playError);
-      //     // Continuer malgré l erreur de play
-      //   }
-
-      //   // Initialiser le lecteur QR code
-      //   const reader = initializeReader();
-      //   setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
-
-      //   // Démarrer la détection de QR codes avec gestion d erreur améliorée
-      //   const startDecoding = () => {
-      //     try {
-      //       reader.decodeFromVideoDevice(
-      //         null,
-      //         videoRef.current!,
-      //         (result, error) => {
-      //           if (result) {
-      //             console.log("QR code détecté:", result.getText());
-      //             const code = result.getText();
-      //             handleScan(code);
-      //           }
-
-      //           if (error) {
-      //             // Ignorer les erreurs de décodage normales (pas de QR code visible)
-      //             if (!error.message?.includes("NotFound")) {
-      //               console.log("Décodage en cours...", error.message);
-      //             }
-      //           }
-      //         }
-      //       );
-      //     } catch (decodeError) {
-      //       console.error("Erreur décodage:", decodeError);
-      //       setScanningStatus("Erreur de scan - Réessayez");
-      //     }
-      //   };
-
-      //   // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
-      //   setTimeout(startDecoding, 1000);
-
-      // }
-
-      const codeReader = new BrowserMultiFormatReader();
-      codeReaderRef.current = codeReader;
-      const startScanner = async () => {
-        if (videoRef.current && isScanning) {
-          try {
-            await codeReader.decodeFromVideoDevice(
-              null,
-              videoRef.current,
-              (result, error) => {
-                if (!isScanningEnabled) return;
-
-                if (result) {
-                  const code = result.getText();
-                  console.log("QR Code Detected:", code);
-                  handleScan(code);
-
-                  // Disable scanning for 10 seconds after successful scan
-                  setIsScanningEnabled(false);
-
-                  setTimeout(() => {
-                    console.log("Re-enabling scanning after delay");
-                    setIsScanningEnabled(true);
-                  }, 10000);
-                }
-
-                if (error && error.name !== "NotFoundException") {
-                  console.error("Error while scanning QR code:", error);
-                  setMessage("Error: " + error.message);
-                }
-              }
-            );
-          } catch (err) {
-            console.error("Failed to start scanner:", err);
-            setMessage(
-              "Failed to access camera: " +
-              (err instanceof Error ? err.message : "Unknown error")
-            );
+        // Attendre que la vidéo soit chargée
+        await new Promise((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error("Élément vidéo non trouvé"));
+            return;
           }
-        }
-      };
 
-      startScanner();
+          videoRef.current.onloadedmetadata = () => {
+            resolve(true);
+          };
+
+          videoRef.current.onerror = () => {
+            reject(new Error("Erreur lors du chargement de la vidéo"));
+          };
+
+          // Timeout de sécurité
+          setTimeout(() => {
+            resolve(true); // Forcer la résolution même si loadedmetadata ne se déclenche pas
+          }, 2000);
+        });
+
+        // Démarrer la lecture
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.warn("Erreur play:", playError);
+          // Continuer malgré l erreur de play
+        }
+
+        // Initialiser le lecteur QR code
+        const reader = initializeReader();
+        setScanningStatus("Scan en cours... Placez le QR code dans le cadre");
+
+        const codeReader = new BrowserMultiFormatReader();
+        codeReaderRef.current = codeReader;
+        const startScanner = async () => {
+          if (videoRef.current && isScanning) {
+            try {
+              await codeReader.decodeFromVideoDevice(
+                null,
+                videoRef.current,
+                (result, error) => {
+                  if (!isScanningEnabled) return;
+  
+                  if (result) {
+                    const code = result.getText();
+                    console.log("QR Code Detected:", code);
+                    handleScan(code);
+  
+                    // Disable scanning for 10 seconds after successful scan
+                    setIsScanningEnabled(false);
+  
+                    setTimeout(() => {
+                      console.log("Re-enabling scanning after delay");
+                      setIsScanningEnabled(true);
+                    }, 10000);
+                  }
+  
+                  if (error && error.name !== "NotFoundException") {
+                    console.error("Error while scanning QR code:", error);
+                    setMessage("Error: " + error.message);
+                  }
+                }
+              );
+            } catch (err) {
+              console.error("Failed to start scanner:", err);
+              setMessage(
+                "Failed to access camera: " +
+                (err instanceof Error ? err.message : "Unknown error")
+              );
+            }
+          }
+        };
+  
+        // startScanner();
+        // Démarrer la détection de QR codes avec gestion d erreur améliorée
+        // const startDecoding = () => {
+        //   try {
+        //     reader.decodeFromVideoDevice(
+        //       null,
+        //       videoRef.current!,
+        //       (result, error) => {
+        //         if (result) {
+        //           console.log("QR code détecté:", result.getText());
+        //           const code = result.getText();
+        //           handleScan(code);
+        //         }
+
+        //         if (error) {
+        //           // Ignorer les erreurs de décodage normales (pas de QR code visible)
+        //           if (!error.message?.includes("NotFound")) {
+        //             console.log("Décodage en cours...", error.message);
+        //           }
+        //         }
+        //       }
+        //     );
+        //   } catch (decodeError) {
+        //     console.error("Erreur décodage:", decodeError);
+        //     setScanningStatus("Erreur de scan - Réessayez");
+        //   }
+        // };
+
+        // Démarrer le décodage après un petit délai pour laisser la caméra s initialiser
+        setTimeout(startScanner, 1000);
+
+      }
 
 
     } catch (error) {
