@@ -123,7 +123,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <p className="text-center text-gray-400 text-xs mt-6">الإصدار 1.1.0</p>
+        <p className="text-center text-gray-400 text-xs mt-6">الإصدار 2.0.0</p>
       </div>
     </div>
   );
