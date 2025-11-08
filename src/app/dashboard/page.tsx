@@ -61,20 +61,20 @@ export default function Dashboard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="fixed top-0 w-full bg-white shadow-sm p-4 flex justify-between items-center">
         <div className="flex items-center">
-          <Home className="w-5 h-5 text-blue-600 mr-2" />
-          <span className="font-semibold">Système de pointage</span>
+          <Home className="w-5 h-5 text-blue-600 ml-2" />
+          <span className="font-semibold">نظام التوقيت</span>
         </div>
         <Button onClick={handleLogout} className="bg-gray-500 hover:bg-gray-600 text-white">
-          Déconnexion
+          تسجيل الخروج
         </Button>
       </div>
 
       <div className="w-full max-w-lg bg-white p-6 mt-16 rounded-lg shadow-lg border">
         <div className="flex justify-center mb-4">
-          <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
+          <Image src="/logo-djamiaya.png" alt="شعار" width={240} height={120} />
         </div>
 
-        {/* Alertes de succès et d'erreur */}
+        {/* تنبيهات النجاح والخطأ */}
         {successMessage && (
           <Alert className="mb-4 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -97,10 +97,10 @@ export default function Dashboard() {
           {userType === "2" && (
             <>
               <Button onClick={() => goToScan("1")} className="w-full bg-blue-500 hover:bg-blue-600 flex justify-between px-4 py-6 text-white">
-                <LogIn /> <span>Scanner Entrée Bus</span> <ArrowRight />
+                <LogIn /> <span>مسح دخول الحافلة</span> <ArrowRight />
               </Button>
               <Button onClick={() => goToScan("0")} className="w-full bg-red-500 hover:bg-red-600 flex justify-between px-4 py-6 text-white">
-                <LogOut /> <span>Scanner Sortie Bus</span> <ArrowRight />
+                <LogOut /> <span>مسح خروج الحافلة</span> <ArrowRight />
               </Button>
             </>
           )}
@@ -108,22 +108,22 @@ export default function Dashboard() {
           {userType === "3" && (
             <>
               <Button onClick={() => goToScan("4")} className="w-full bg-green-500 hover:bg-green-600 flex justify-between px-4 py-6 text-white">
-                <LogIn /> <span>Entrée spéciale</span> <ArrowRight />
+                <LogIn /> <span>دخول خاص</span> <ArrowRight />
               </Button>
               <Button onClick={() => goToScan("3")} className="w-full bg-orange-500 hover:bg-orange-600 flex justify-between px-4 py-6 text-white">
-                <LogOut /> <span>Sortie spéciale</span> <ArrowRight />
+                <LogOut /> <span>خروج خاص</span> <ArrowRight />
               </Button>
             </>
           )}
 
           {["0", "1"].includes(userType || "") && (
             <Button onClick={() => goToScan("bus")} className="w-full bg-green-500 hover:bg-green-600 flex justify-between px-4 py-6 text-white">
-              <QrCode /> <span>Scanner Bus</span> <ArrowRight />
+              <QrCode /> <span>مسح الحافلة</span> <ArrowRight />
             </Button>
           )}
         </div>
 
-        <p className="text-center text-gray-400 text-xs mt-6">Version 1.1.0</p>
+        <p className="text-center text-gray-400 text-xs mt-6">الإصدار 1.1.0</p>
       </div>
     </div>
   );
