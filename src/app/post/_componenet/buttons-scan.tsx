@@ -16,16 +16,16 @@ const ButtonScan = ({
                 variant="outline"
                 className="flex-1"
             >
-                <Camera className="w-4 h-4 mr-2" />
-                Forcer la détection
+                <Camera className="w-4 h-4 ml-2" />
+                إجبار الكشف
             </Button>
             <Button
                 onClick={stopCamera}
                 variant="outline"
                 className="flex-1"
             >
-                <CameraOff className="w-4 h-4 mr-2" />
-                Arrêter
+                <CameraOff className="w-4 h-4 ml-2" />
+                إيقاف
             </Button>
         </div>
     )

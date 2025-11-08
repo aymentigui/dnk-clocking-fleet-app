@@ -27,8 +27,8 @@ const Header = ({
             <div className="fixed top-0 w-full bg-white shadow-md p-4 flex justify-between items-center z-10">
                 <Link href="/dashboard">
                     <div className="flex items-center">
-                        <Home className="w-5 h-5 text-blue-600 mr-2" />
-                        <span className="font-semibold text-gray-800">Système de pointage</span>
+                        <Home className="w-5 h-5 text-blue-600 ml-2" />
+                        <span className="font-semibold text-gray-800">نظام التوقيت</span>
                     </div>
                 </Link>
                 <Button
@@ -36,7 +36,7 @@ const Header = ({
                     variant="outline"
                     className="text-gray-700 hover:bg-gray-100"
                 >
-                    Déconnexion
+                    تسجيل الخروج
                 </Button>
             </div>
         </>

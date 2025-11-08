@@ -14,21 +14,21 @@ const ErreurAlert = ({
     return (
         <div className="text-center space-y-6">
             <XCircle className="w-24 h-24 mx-auto text-red-500" />
-            <h3 className="text-2xl font-bold text-red-600">❌ Erreur</h3>
+            <h3 className="text-2xl font-bold text-red-600">❌ خطأ</h3>
             <p className="text-gray-700">{message}</p>
             <div className="space-y-3">
                 <Button
                     onClick={handleNewScan}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4"
                 >
-                    Réessayer 🔄
+                    إعادة المحاولة 🔄
                 </Button>
                 <Button
                     onClick={goToDashboard}
                     variant="outline"
                     className="w-full py-4"
                 >
-                    Retour au tableau de bord 🏠
+                    العودة إلى لوحة التحكم 🏠
                 </Button>
             </div>
         </div>

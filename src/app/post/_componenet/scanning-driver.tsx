@@ -25,10 +25,10 @@ const ScanningDriver = ({
         <div className="space-y-4">
             <div className="text-center">
                 <User className="w-16 h-16 mx-auto text-orange-500 animate-pulse" />
-                <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le chauffeur 👷‍♂️</h3>
-                <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
+                <h3 className="mt-3 text-xl font-semibold text-gray-800">امسح السائق 👷‍♂️</h3>
+                <p className="text-sm text-gray-500 mt-1">ضع رمز QR أمام الكاميرا</p>
                 <div className="mt-2 bg-blue-50 border border-blue-200 rounded p-2">
-                    <p className="text-xs text-gray-600">Bus: <span className="font-bold text-blue-600">{busCode}</span></p>
+                    <p className="text-xs text-gray-600">الحافلة: <span className="font-bold text-blue-600">{busCode}</span></p>
                 </div>
                 <div className="mt-2 p-2 bg-orange-50 rounded">
                     <p className="text-xs text-orange-600 font-medium">{scanningStatus}</p>

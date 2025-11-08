@@ -325,25 +325,25 @@ export default function PostPage() {
 
       <Header stopCamera={stopCamera} />
 
-      {/* Contenu principal */}
+      {/* المحتوى الرئيسي */}
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-20 mb-6 space-y-6">
 
-        {/* État: Idle - Démarrer le scan */}
+        {/* الحالة: استعداد - بدء المسح */}
         {step === "idle" && (
           <div className="text-center space-y-6">
             <Bus className="w-20 h-20 mx-auto text-blue-500" />
-            <h2 className="text-2xl font-bold text-gray-800">Pointage Bus</h2>
-            <p className="text-gray-600">Commencez par scanner le QR code du bus</p>
+            <h2 className="text-2xl font-bold text-gray-800">توقيت الحافلة</h2>
+            <p className="text-gray-600">ابدأ بمسح رمز الاستجابة السريعة للحافلة</p>
             <Button
               onClick={startBusScan}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
             >
-              Démarrer le scan 🚍
+              بدء المسح 🚍
             </Button>
           </div>
         )}
 
-        {/* État: Scan du bus en cours */}
+        {/* الحالة: جاري مسح الحافلة */}
         {step === "scanning-bus" && (
           <ScanningBus
             cameraError={cameraError}
@@ -355,12 +355,12 @@ export default function PostPage() {
           />
         )}
 
-        {/* État: Bus scanné */}
+        {/* الحالة: تم مسح الحافلة */}
         {step === "bus-scanned" && (
           <BusScanned busCode={busCode} startDriverScan={startDriverScan} />
         )}
 
-        {/* État: Scan du chauffeur en cours */}
+        {/* الحالة: جاري مسح السائق */}
         {step === "scanning-driver" && (
           <ScanningDriver
             busCode={busCode}
@@ -373,17 +373,17 @@ export default function PostPage() {
           />
         )}
 
-        {/* Les autres états restent similaires */}
-        {/* État: Envoi en cours */}
+        {/* الحالات الأخرى تظل مشابهة */}
+        {/* الحالة: جاري الإرسال */}
         {step === "sending" && (
           <div className="text-center space-y-6 py-8">
             <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600 mx-auto"></div>
-            <h3 className="text-xl font-semibold text-gray-800">Envoi en cours...</h3>
-            <p className="text-gray-600">Veuillez patienter</p>
+            <h3 className="text-xl font-semibold text-gray-800">جاري الإرسال...</h3>
+            <p className="text-gray-600">يرجى الانتظار</p>
           </div>
         )}
 
-        {/* État: Succès */}
+        {/* الحالة: نجاح */}
         {step === "success" && (
           <SuccessAlert
             busName={busName}
@@ -393,7 +393,7 @@ export default function PostPage() {
             message={message} />
         )}
 
-        {/* État: Erreur */}
+        {/* الحالة: خطأ */}
         {step === "error" && (
           <ErreurAlert message={message} goToDashboard={goToDashboard} handleNewScan={handleNewScan} />
         )}

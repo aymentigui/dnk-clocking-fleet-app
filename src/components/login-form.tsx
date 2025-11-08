@@ -55,12 +55,12 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen w-full bg-gray-50">
       <Card className="w-full max-w-md shadow-lg">
         <div className="flex justify-center p-6 pb-0">
-          <Image src="/logo-djamiaya.png" alt="Logo" width={240} height={120} />
+          <Image src="/logo-djamiaya.png" alt="شعار" width={240} height={120} />
         </div>
 
         <CardHeader>
-          <CardTitle className="text-2xl text-center font-bold">Connexion</CardTitle>
-          <CardDescription className="text-center">Entrez vos identifiants</CardDescription>
+          <CardTitle className="text-2xl text-center font-bold">تسجيل الدخول</CardTitle>
+          <CardDescription className="text-center">أدخل بيانات الاعتماد الخاصة بك</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -68,11 +68,11 @@ export default function LoginPage() {
             {error && <div className="p-3 text-sm text-white bg-red-500 rounded">{error}</div>}
 
             <div >
-              <Label className="m-2">Email</Label>
+              <Label className="m-2">البريد الإلكتروني</Label>
               <Input
                 className="m-2"
                 type="email"
-                placeholder="nom@example.com"
+                placeholder="اسم@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -80,7 +80,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <Label className="m-2">Mot de passe</Label>
+              <Label className="m-2">كلمة المرور</Label>
               <div className="relative">
                 <Input
                   className="m-2"
@@ -94,7 +94,7 @@ export default function LoginPage() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-0 top-0 h-full px-3 text-gray-400"
+                  className="absolute left-0 top-0 h-full px-3 text-gray-400"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -103,7 +103,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full m-2" disabled={isLoading}>
-              {isLoading ? "Connexion..." : "Se connecter"}
+              {isLoading ? "جاري التسجيل..." : "تسجيل الدخول"}
             </Button>
           </form>
         </CardContent>

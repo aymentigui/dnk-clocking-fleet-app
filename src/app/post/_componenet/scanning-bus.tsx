@@ -23,8 +23,8 @@ const ScanningBus = ({
         <div className="space-y-4">
             <div className="text-center">
                 <Bus className="w-16 h-16 mx-auto text-blue-500 animate-pulse" />
-                <h3 className="mt-3 text-xl font-semibold text-gray-800">Scannez le bus 🚍</h3>
-                <p className="text-sm text-gray-500 mt-1">Placez le QR code devant la caméra</p>
+                <h3 className="mt-3 text-xl font-semibold text-gray-800">امسح الحافلة 🚍</h3>
+                <p className="text-sm text-gray-500 mt-1">ضع رمز QR أمام الكاميرا</p>
                 <div className="mt-2 p-2 bg-blue-50 rounded">
                     <p className="text-xs text-blue-600 font-medium">{scanningStatus}</p>
                 </div>
