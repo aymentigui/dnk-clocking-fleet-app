@@ -67,7 +67,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <div className="p-3 text-sm text-white bg-red-500 rounded">{error}</div>}
 
-            <div >
+            <div className="text-right">
               <Label className="m-2">البريد الإلكتروني</Label>
               <Input
                 className="m-2"
@@ -79,7 +79,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
+            <div className="text-right">
               <Label className="m-2">كلمة المرور</Label>
               <div className="relative">
                 <Input
